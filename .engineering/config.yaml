@@ -1,0 +1,9 @@
+# Source of truth for generated agent integrations.
+version: 1
+project_name: "aplomo"
+agents: ["cursor", "claude", "codex"]
+technologies: ["Python"]
+integrations:
+  hooks: true
+  mcp: true
+  skills: true

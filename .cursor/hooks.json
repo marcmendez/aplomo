@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "aplomo hook --source cursor"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "aplomo hook --source cursor"
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": "aplomo hook --source cursor"
+      }
+    ]
+  }
+}

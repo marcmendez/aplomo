@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "generator": "aplomo",
+  "files": [
+    ".agents/skills/aplomo-review/SKILL.md",
+    ".claude/settings.json",
+    ".claude/skills/aplomo-review/SKILL.md",
+    ".codex/config.toml",
+    ".codex/hooks.json",
+    ".cursor/hooks.json",
+    ".cursor/mcp.json",
+    ".cursor/rules/aplomo.mdc",
+    ".mcp.json",
+    "AGENTS.md",
+    "CLAUDE.md"
+  ]
+}

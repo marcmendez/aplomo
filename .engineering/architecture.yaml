@@ -1,0 +1,7 @@
+# Repository architecture model. Extend this file; generated integrations read it indirectly.
+version: 1
+layers: {}
+rules:
+  forbid_cycles: true
+  require_tests_for_code_changes: true
+  prefer_existing_patterns: true
