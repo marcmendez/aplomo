@@ -1,22 +1,42 @@
-# Codex
+# Use Aplomo with Codex
+
+## Install
+
+Install the Aplomo CLI once, then initialize the repository:
 
 ```bash
-cd tu-repositorio
+uv tool install git+https://github.com/marcmendez/aplomo.git
+cd your-repository
 aplomo init --agents codex
-aplomo doctor
 ```
 
-Aplomo crea `.codex/config.toml`, `.codex/hooks.json`, un bloque delimitado en `AGENTS.md` y `.agents/skills/aplomo-review/SKILL.md`.
+Open a new Codex task from the repository and trust the project if Codex asks. Project-level MCP configuration is loaded only for trusted projects.
 
-Abre o reinicia la tarea de Codex desde ese repositorio y confía en el proyecto cuando la aplicación lo solicite. Comprueba la conexión:
+## Use
+
+Send normal requests to Codex. Aplomo does not require a prefix:
 
 ```text
-Usa aplomo_understand_repo y después aplomo_review_architecture.
+Extract the payment retry logic without duplicating the existing service pattern.
 ```
 
-Aplomo solo gestiona el bloque comprendido entre `<!-- aplomo:start -->` y `<!-- aplomo:end -->`; el resto de `AGENTS.md` se conserva.
+Codex reads the managed Aplomo section in `AGENTS.md`. `.codex/config.toml` starts the Aplomo MCP server for the project, `.codex/hooks.json` records configured lifecycle events, and `.agents/skills/aplomo-review/SKILL.md` provides the review workflow.
 
-```bash
-aplomo doctor
-aplomo eval
+To check the MCP connection explicitly, ask:
+
+```text
+Use aplomo_understand_repo, then aplomo_review_architecture.
 ```
+
+## Generated files
+
+```text
+.
+├── .agents/skills/aplomo-review/SKILL.md
+├── .codex/
+│   ├── config.toml
+│   └── hooks.json
+└── AGENTS.md
+```
+
+Aplomo only manages the section between `<!-- aplomo:start -->` and `<!-- aplomo:end -->` in `AGENTS.md`. Other repository instructions remain untouched.

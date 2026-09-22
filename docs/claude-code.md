@@ -1,22 +1,42 @@
-# Claude Code
+# Use Aplomo with Claude Code
+
+## Install
+
+Install the Aplomo CLI once, then initialize the repository:
 
 ```bash
-cd tu-repositorio
+uv tool install git+https://github.com/marcmendez/aplomo.git
+cd your-repository
 aplomo init --agents claude
-aplomo doctor
 ```
 
-Aplomo crea `.mcp.json`, `.claude/settings.json`, un bloque delimitado en `CLAUDE.md` y `.claude/skills/aplomo-review/SKILL.md`.
+Start a new Claude Code session from the repository root. Review and approve the project MCP server if Claude Code asks for confirmation.
 
-Reinicia Claude Code desde la raíz y acepta el servidor MCP del proyecto después de revisar su comando. Comprueba la conexión:
+## Use
+
+Send normal requests to Claude Code. Aplomo does not require a prefix:
 
 ```text
-Usa aplomo_find_existing_patterns para buscar el patrón de configuración actual.
+Add an audit trail to account updates and follow the repository's existing pattern.
 ```
 
-Si `.mcp.json` o `.claude/settings.json` ya existían, Aplomo los marca como `skipped` para evitar perder tu configuración; combínalos manualmente si necesitas ambos.
+Claude Code reads the managed section in `CLAUDE.md`. `.mcp.json` exposes the Aplomo MCP server, `.claude/skills/aplomo-review/SKILL.md` provides the review workflow, and `.claude/settings.json` records configured lifecycle events.
 
-```bash
-aplomo doctor
-aplomo eval
+To check the MCP connection explicitly, ask:
+
+```text
+Use aplomo_find_existing_patterns to find the current configuration pattern.
 ```
+
+## Generated files
+
+```text
+.
+├── .claude/
+│   ├── settings.json
+│   └── skills/aplomo-review/SKILL.md
+├── .mcp.json
+└── CLAUDE.md
+```
+
+Aplomo only manages the section between `<!-- aplomo:start -->` and `<!-- aplomo:end -->` in `CLAUDE.md`. If `.mcp.json` or `.claude/settings.json` already exists and is not owned by Aplomo, installation reports it as `skipped` instead of overwriting it.

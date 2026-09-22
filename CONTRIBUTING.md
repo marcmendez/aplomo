@@ -1,6 +1,6 @@
-# Contribuir
+# Contributing
 
-Necesitas Python 3.12+ y `uv`.
+You need Python 3.12 or newer and `uv`.
 
 ```bash
 uv sync --python 3.12
@@ -10,6 +10,6 @@ uv run python -m compileall -q src tests
 uv build
 ```
 
-`.engineering/` es la fuente de verdad. No edites los adaptadores generados directamente: cambia la configuración o el generador y ejecuta `uv run aplomo install`.
+`.engineering/` is the source of truth. Do not edit generated adapters directly: change the configuration or generator and run `uv run aplomo install`.
 
-Antes de añadir una abstracción, busca un equivalente, revisa el límite del módulo y explica por qué el patrón existente no se puede ampliar. Todo cambio funcional debe incluir pruebas y mantener la instalación segura e idempotente.
+Before adding an abstraction, search for an existing equivalent, review the module boundary, and explain why the current pattern cannot be extended. Every functional change must include tests and preserve safe, idempotent installation.
