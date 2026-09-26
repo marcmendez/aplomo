@@ -1,0 +1,18 @@
+{
+  "name": "aplomo",
+  "version": "1.0.0",
+  "description": "A repository-aware engineering workflow for coding agents.",
+  "author": {
+    "name": "Marc Mendez"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Aplomo",
+    "shortDescription": "Keep coding agents aligned with repository conventions.",
+    "longDescription": "Understand repository boundaries, reuse existing patterns, review plans, and inspect final diffs before completing non-trivial changes.",
+    "developerName": "Marc Mendez",
+    "category": "Developer Tools",
+    "capabilities": ["Read"],
+    "defaultPrompt": "Review my implementation plan against this repository's existing architecture."
+  }
+}

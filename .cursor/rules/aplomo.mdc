@@ -3,4 +3,4 @@ description: Apply the repository's Aplomo engineering workflow
 alwaysApply: true
 ---
 
-Treat `.engineering/` as the source of truth. Before adding an abstraction, use the Aplomo MCP tools to understand the repository, search existing patterns, review the plan, and review the final diff. Update `.engineering/config.yaml` and run `aplomo install` instead of editing generated integrations.
+Treat `.engineering/` as the source of truth. For non-trivial code changes, call `aplomo_prepare_change` once before implementation, prefer existing patterns, respect reported boundaries, add focused tests, and call `aplomo_review_diff` once before completion. Keep the workflow proportional. Update `.engineering/config.yaml` and run `aplomo install` instead of editing generated integrations.

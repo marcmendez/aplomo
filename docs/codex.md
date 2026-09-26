@@ -20,7 +20,7 @@ Send normal requests to Codex. Aplomo does not require a prefix:
 Extract the payment retry logic without duplicating the existing service pattern.
 ```
 
-Codex reads the managed Aplomo section in `AGENTS.md`. `.codex/config.toml` starts the Aplomo MCP server for the project, `.codex/hooks.json` records configured lifecycle events, and `.agents/skills/aplomo-review/SKILL.md` provides the review workflow.
+Codex reads the managed Aplomo section in `AGENTS.md`. `.codex/config.toml` starts the Aplomo MCP server for the project, `.codex/hooks.json` records configured lifecycle events, and `.agents/skills/aplomo-review/SKILL.md` provides the review workflow. For a non-trivial request, the normal path is one `aplomo_prepare_change` preflight and one `aplomo_review_diff` call before completion.
 
 To check the MCP connection explicitly, ask:
 

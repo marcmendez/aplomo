@@ -3,17 +3,17 @@
   "hooks": {
     "sessionStart": [
       {
-        "command": "aplomo hook --source cursor"
+        "command": "./.engineering/aplomo-runtime hook --source cursor --root ."
       }
     ],
     "afterFileEdit": [
       {
-        "command": "aplomo hook --source cursor"
+        "command": "./.engineering/aplomo-runtime hook --source cursor --root ."
       }
     ],
     "afterShellExecution": [
       {
-        "command": "aplomo hook --source cursor"
+        "command": "./.engineering/aplomo-runtime hook --source cursor --root ."
       }
     ]
   }

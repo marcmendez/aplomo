@@ -2,7 +2,7 @@
   "mcpServers": {
     "aplomo": {
       "type": "stdio",
-      "command": "aplomo",
+      "command": "./.engineering/aplomo-runtime",
       "args": [
         "mcp",
         "--root",

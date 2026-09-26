@@ -6,6 +6,7 @@ You need Python 3.12 or newer and `uv`.
 uv sync --python 3.12
 uv run pytest -q
 uv run aplomo eval
+uv run python benchmarks/run_codex.py --repetitions 1
 uv run python -m compileall -q src tests
 uv build
 ```

@@ -20,7 +20,7 @@ Send normal requests to Claude Code. Aplomo does not require a prefix:
 Add an audit trail to account updates and follow the repository's existing pattern.
 ```
 
-Claude Code reads the managed section in `CLAUDE.md`. `.mcp.json` exposes the Aplomo MCP server, `.claude/skills/aplomo-review/SKILL.md` provides the review workflow, and `.claude/settings.json` records configured lifecycle events.
+Claude Code reads the managed section in `CLAUDE.md`. `.mcp.json` exposes the Aplomo MCP server, `.claude/skills/aplomo-review/SKILL.md` provides the review workflow, and `.claude/settings.json` records configured lifecycle events. For a non-trivial request, the normal path is one `aplomo_prepare_change` preflight and one `aplomo_review_diff` call before completion.
 
 To check the MCP connection explicitly, ask:
 

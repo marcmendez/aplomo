@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "aplomo hook --source codex"
+            "command": "./.engineering/aplomo-runtime hook --source codex --root ."
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "aplomo hook --source codex"
+            "command": "./.engineering/aplomo-runtime hook --source codex --root ."
           }
         ]
       }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "aplomo hook --source codex"
+            "command": "./.engineering/aplomo-runtime hook --source codex --root ."
           }
         ]
       }

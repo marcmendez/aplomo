@@ -6,12 +6,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Callable, Dict, List
 import json
+import subprocess
 import tomllib
 
 from .config import HarnessConfig
 from .events import EventNormalizer, EventType
 from .generators import install_integrations
 from .mcp_server import dispatch
+from .runtime import LAUNCHER, launcher_command, mcp_smoke_test
 
 
 def run_evaluations() -> Dict[str, object]:
@@ -22,6 +24,7 @@ def run_evaluations() -> Dict[str, object]:
         ("safe installation", _evaluate_safe_installation),
         ("idempotent regeneration", _evaluate_idempotency),
         ("MCP protocol contract", _evaluate_mcp),
+        ("agent runtime launch", _evaluate_runtime_launch),
     ]
     for name, evaluate in cases:
         try:
@@ -56,9 +59,10 @@ def _evaluate_agent_configs() -> str:
         cursor = json.loads((root / ".cursor/mcp.json").read_text(encoding="utf-8"))
         claude = json.loads((root / ".mcp.json").read_text(encoding="utf-8"))
         codex = tomllib.loads((root / ".codex/config.toml").read_text(encoding="utf-8"))
-        assert cursor["mcpServers"]["aplomo"]["command"] == "aplomo"
-        assert claude["mcpServers"]["aplomo"]["command"] == "aplomo"
-        assert codex["mcp_servers"]["aplomo"]["command"] == "aplomo"
+        assert cursor["mcpServers"]["aplomo"]["command"] == launcher_command()
+        assert claude["mcpServers"]["aplomo"]["command"] == launcher_command()
+        assert codex["mcp_servers"]["aplomo"]["command"] == launcher_command()
+        assert (root / LAUNCHER).exists()
         assert (root / ".cursor/rules/aplomo.mdc").exists()
         assert (root / ".claude/skills/aplomo-review/SKILL.md").exists()
         assert (root / ".agents/skills/aplomo-review/SKILL.md").exists()
@@ -99,7 +103,30 @@ def _evaluate_mcp() -> str:
         assert initialized["result"]["serverInfo"]["name"] == "aplomo"
         listed = dispatch(root, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
         names = {tool["name"] for tool in listed["result"]["tools"]}
-        assert {"aplomo_understand_repo", "aplomo_find_existing_patterns", "aplomo_review_plan", "aplomo_review_diff"} <= names
+        assert {"aplomo_prepare_change", "aplomo_understand_repo", "aplomo_find_existing_patterns", "aplomo_review_plan", "aplomo_review_diff"} <= names
         called = dispatch(root, {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "aplomo_review_plan", "arguments": {"plan": "Search existing patterns, change one module compatibly, and run tests."}}})
         assert json.loads(called["result"]["content"][0]["text"])["status"] == "pass"
     return "initialize, list, and call succeed"
+
+
+def _evaluate_runtime_launch() -> str:
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        (root / ".engineering").mkdir()
+        install_integrations(root, HarnessConfig(project_name="eval", agents=["codex"]))
+        result = mcp_smoke_test(root)
+        assert result["ok"], result["detail"]
+        hook = subprocess.run(
+            [str(root / LAUNCHER), "hook", "--source", "codex", "--root", str(root)],
+            cwd=str(root),
+            input=json.dumps({"hook_event_name": "PostToolUse", "tool_name": "Edit", "tool_input": {"file_path": "src/a.py"}}),
+            text=True,
+            capture_output=True,
+            timeout=8,
+            check=False,
+        )
+        assert hook.returncode == 0, hook.stderr.strip() or f"hook exited {hook.returncode}"
+        event = json.loads((root / ".engineering/events.jsonl").read_text(encoding="utf-8"))
+        assert event["event"] == "FILE_WRITE"
+        assert event["path"] == "src/a.py"
+    return "generated launcher starts MCP and records a hook event"

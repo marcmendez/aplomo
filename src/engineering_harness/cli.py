@@ -16,6 +16,7 @@ from .evaluations import run_evaluations
 from .generators import generated_files, install_integrations
 from .mcp_server import run as run_mcp
 from .repository import index_repository
+from .runtime import mcp_smoke_test
 
 
 ARCHITECTURE_TEMPLATE = """# Repository architecture model. Extend this file; generated integrations read it indirectly.
@@ -125,6 +126,8 @@ def command_doctor(args: Namespace) -> int:
                 "ok": path.exists() and path.read_text(encoding="utf-8") == content,
                 "detail": "installed and current" if path.exists() and path.read_text(encoding="utf-8") == content else "missing or stale",
             }
+        runtime = mcp_smoke_test(root)
+        checks["runtime_launch"] = runtime
     profile = detect_repository(root)
     index = index_repository(root)
     checks["git"] = {"ok": profile.is_git, "detail": "repository" if profile.is_git else "not initialized"}

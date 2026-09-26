@@ -65,6 +65,21 @@ class RepositoryAnalysisTests(unittest.TestCase):
         self.assertTrue(any("secret" in warning.lower() for warning in result["warnings"]))
         self.assertTrue(any("test" in warning.lower() for warning in result["warnings"]))
 
+    def test_diff_review_includes_untracked_code_and_tests(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            source = root / "src/new_feature.py"
+            test = root / "tests/test_new_feature.py"
+            source.parent.mkdir()
+            test.parent.mkdir()
+            source.write_text("def new_feature():\n    return True\n", encoding="utf-8")
+            test.write_text("def test_new_feature():\n    assert True\n", encoding="utf-8")
+            result = review_diff(root)
+        self.assertEqual(result["status"], "pass")
+        self.assertEqual(result["untracked"], ["src/new_feature.py", "tests/test_new_feature.py"])
+        self.assertEqual(result["additions"], 4)
+
 
 if __name__ == "__main__":
     unittest.main()

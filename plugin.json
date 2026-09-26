@@ -1,0 +1,37 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "aplomo",
+  "version": "1.0.0",
+  "description": "A repository-aware engineering workflow for coding agents.",
+  "author": {
+    "name": "Marc Mendez",
+    "url": "https://github.com/marcmendez"
+  },
+  "homepage": "https://github.com/marcmendez/aplomo",
+  "repository": "https://github.com/marcmendez/aplomo",
+  "license": "MIT",
+  "keywords": ["coding-agents", "engineering", "code-review", "architecture", "mcp"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Aplomo",
+        "shortDescription": "Keep coding agents aligned with repository conventions.",
+        "longDescription": "Aplomo guides coding agents to understand module boundaries, reuse existing patterns, review implementation plans, and inspect final diffs before completing non-trivial repository changes.",
+        "developerName": "Marc Mendez",
+        "category": "Developer Tools",
+        "capabilities": ["Read"],
+        "websiteURL": "https://github.com/marcmendez/aplomo",
+        "privacyPolicyURL": "https://github.com/marcmendez/aplomo/blob/main/PRIVACY.md",
+        "termsOfServiceURL": "https://github.com/marcmendez/aplomo/blob/main/TERMS.md",
+        "defaultPrompt": [
+          "Review my implementation plan against the repository's existing architecture.",
+          "Find the existing pattern I should extend before I add this feature.",
+          "Review the current diff for architectural and testing risks."
+        ],
+        "brandColor": "#315C4A",
+        "composerIcon": "./assets/aplomo-icon.svg",
+        "logo": "./assets/aplomo-logo.svg"
+      }
+    }
+  }
+}

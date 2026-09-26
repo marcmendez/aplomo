@@ -97,6 +97,17 @@ def review_diff(root: Path) -> Dict[str, Any]:
     diff = completed.stdout
     changed = re.findall(r"^\+\+\+ b/(.+)$", diff, re.MULTILINE)
     additions = [line[1:] for line in diff.splitlines() if line.startswith("+") and not line.startswith("+++")]
+    untracked_result = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard"],
+        cwd=str(root), text=True, capture_output=True, check=False,
+    )
+    untracked = untracked_result.stdout.splitlines() if untracked_result.returncode == 0 else []
+    for relative in untracked:
+        try:
+            additions.extend((root / relative).read_text(encoding="utf-8").splitlines())
+        except (OSError, UnicodeDecodeError):
+            continue
+    changed = list(dict.fromkeys([*changed, *untracked]))
     warnings = []
     secret_pattern = re.compile(r"(?i)(api[_-]?key|secret|password|token)\s*[:=]\s*['\"][^'\"]+")
     if any(secret_pattern.search(line) for line in additions):
@@ -107,4 +118,10 @@ def review_diff(root: Path) -> Dict[str, Any]:
     tests_changed = any("test" in Path(path).name.lower() for path in changed)
     if code_changed and not tests_changed:
         warnings.append("Code changed without an accompanying test change")
-    return {"status": "pass" if not warnings else "needs_attention", "files": changed, "additions": len(additions), "warnings": warnings}
+    return {
+        "status": "pass" if not warnings else "needs_attention",
+        "files": changed,
+        "untracked": untracked,
+        "additions": len(additions),
+        "warnings": warnings,
+    }

@@ -10,6 +10,8 @@
     ".cursor/hooks.json",
     ".cursor/mcp.json",
     ".cursor/rules/aplomo.mdc",
+    ".engineering/aplomo-runtime",
+    ".gitignore",
     ".mcp.json",
     "AGENTS.md",
     "CLAUDE.md"

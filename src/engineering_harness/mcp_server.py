@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict
 import json
+import re
 import sys
 
 from .repository import find_existing_patterns, review_diff, review_plan, understand_repo
@@ -12,9 +13,21 @@ from .repository import find_existing_patterns, review_diff, review_plan, unders
 
 TOOLS = [
     {
+        "name": "aplomo_prepare_change",
+        "description": "Prepare one coding request with repository structure, relevant existing patterns, and architecture rules in a single call.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"request": {"type": "string"}, "query": {"type": "string"}},
+            "required": ["request"],
+            "additionalProperties": False,
+        },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False, "idempotentHint": True},
+    },
+    {
         "name": "aplomo_understand_repo",
         "description": "Detect technologies and summarize modules and symbols in the repository.",
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False, "idempotentHint": True},
     },
     {
         "name": "aplomo_find_existing_patterns",
@@ -25,6 +38,7 @@ TOOLS = [
             "required": ["query"],
             "additionalProperties": False,
         },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False, "idempotentHint": True},
     },
     {
         "name": "aplomo_review_plan",
@@ -32,16 +46,19 @@ TOOLS = [
         "inputSchema": {
             "type": "object", "properties": {"plan": {"type": "string"}}, "required": ["plan"], "additionalProperties": False
         },
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False, "idempotentHint": True},
     },
     {
         "name": "aplomo_review_architecture",
         "description": "Summarize architecture configuration and repository structure for an architecture review.",
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False, "idempotentHint": True},
     },
     {
         "name": "aplomo_review_diff",
         "description": "Review the current git diff for risky size, secrets, and missing test changes.",
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False, "idempotentHint": True},
     },
 ]
 
@@ -68,7 +85,7 @@ def dispatch(root: Path, request: Dict[str, Any]):
         return _result(request_id, {
             "protocolVersion": request.get("params", {}).get("protocolVersion", "2025-06-18"),
             "capabilities": {"tools": {}},
-            "serverInfo": {"name": "aplomo", "version": "0.1.0"},
+            "serverInfo": {"name": "aplomo", "version": "1.0.0"},
             "instructions": "Understand the repository and search existing patterns before reviewing plans or diffs.",
         })
     if method == "tools/list":
@@ -82,6 +99,21 @@ def dispatch(root: Path, request: Dict[str, Any]):
 
 def call_tool(root: Path, name: str, arguments: Dict[str, Any]):
     # The engineering_* aliases keep pre-Aplomo generated skills working during migration.
+    if name == "aplomo_prepare_change":
+        request = str(arguments.get("request", ""))
+        query = str(arguments.get("query", "")).strip() or _search_query(request)
+        architecture = root / ".engineering" / "architecture.yaml"
+        return {
+            "request": request,
+            "repository": understand_repo(root),
+            "existing_patterns": find_existing_patterns(root, query, 12),
+            "architecture": architecture.read_text(encoding="utf-8") if architecture.exists() else None,
+            "guidance": [
+                "Extend an existing pattern when one matches the request.",
+                "Keep changes inside the declared module boundaries.",
+                "Add focused tests and inspect the final diff.",
+            ],
+        }
     if name in {"aplomo_understand_repo", "engineering_understand_repo"}:
         return understand_repo(root)
     if name in {"aplomo_find_existing_patterns", "engineering_find_existing_patterns"}:
@@ -101,3 +133,9 @@ def call_tool(root: Path, name: str, arguments: Dict[str, Any]):
 
 def _result(request_id: Any, value: Any):
     return {"jsonrpc": "2.0", "id": request_id, "result": value}
+
+
+def _search_query(request: str) -> str:
+    words = re.findall(r"[A-Za-z][A-Za-z0-9_]{3,}", request)
+    ignored = {"with", "from", "that", "this", "while", "existing", "current", "public", "tests", "support"}
+    return next((word for word in words if word.lower() not in ignored), request.strip())

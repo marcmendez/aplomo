@@ -10,6 +10,7 @@ from unittest.mock import patch
 from engineering_harness.cli import main
 from engineering_harness.config import HarnessConfig
 from engineering_harness.generators import install_integrations
+from engineering_harness.runtime import LAUNCHER, launcher_command, mcp_smoke_test
 
 
 class CliTests(unittest.TestCase):
@@ -27,8 +28,10 @@ class CliTests(unittest.TestCase):
             self.assertIn("aplomo:start", (root / "AGENTS.md").read_text(encoding="utf-8"))
             self.assertEqual(
                 tomllib.loads((root / ".codex/config.toml").read_text(encoding="utf-8"))["mcp_servers"]["aplomo"]["command"],
-                "aplomo",
+                launcher_command(),
             )
+            self.assertTrue((root / LAUNCHER).exists())
+            self.assertTrue(mcp_smoke_test(root)["ok"])
             with redirect_stdout(io.StringIO()):
                 self.assertEqual(main(["doctor", "--root", str(root)]), 0)
 
@@ -145,6 +148,25 @@ class CliTests(unittest.TestCase):
             )
             content = json.loads(reviewed["result"]["content"][0]["text"])
             self.assertEqual(content["status"], "pass")
+
+    def test_prepare_change_combines_repository_context(self):
+        from engineering_harness.mcp_server import call_tool
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "src/retry.py"
+            source.parent.mkdir()
+            source.write_text("class RetryPolicy:\n    pass\n", encoding="utf-8")
+            architecture = root / ".engineering/architecture.yaml"
+            architecture.parent.mkdir()
+            architecture.write_text("version: 1\n", encoding="utf-8")
+            result = call_tool(
+                root,
+                "aplomo_prepare_change",
+                {"request": "Add invoice retries", "query": "RetryPolicy"},
+            )
+            self.assertEqual(result["existing_patterns"]["matches"][0]["path"], "src/retry.py")
+            self.assertEqual(result["architecture"], "version: 1\n")
 
     def test_eval_command_reports_all_acceptance_checks(self):
         output = io.StringIO()
