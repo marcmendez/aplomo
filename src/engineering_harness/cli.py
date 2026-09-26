@@ -26,6 +26,21 @@ rules:
   forbid_cycles: true
   require_tests_for_code_changes: true
   prefer_existing_patterns: true
+  require_abstraction_justification: true
+  bounded_context_reads: true
+"""
+
+PATTERNS_TEMPLATE = """# Repository pattern catalog
+
+Document the patterns an agent should extend before creating another abstraction.
+
+## Pattern name
+
+- Responsibility: what problem this pattern owns
+- Canonical implementation: `path/to/file`
+- Extend when: the new behavior belongs to the same responsibility
+- Create a new abstraction only when: the responsibility or lifecycle is materially different
+- Validation: tests or commands that prove compatibility
 """
 
 
@@ -78,6 +93,7 @@ def command_init(args: Namespace) -> int:
         return 2
     config_path.write_text(config.dump(), encoding="utf-8")
     (engineering / "architecture.yaml").write_text(ARCHITECTURE_TEMPLATE, encoding="utf-8")
+    (engineering / "patterns.md").write_text(PATTERNS_TEMPLATE, encoding="utf-8")
     (engineering / "decisions").mkdir(exist_ok=True)
     (engineering / "events.jsonl").touch(exist_ok=True)
 
@@ -102,6 +118,10 @@ def command_install(args: Namespace) -> int:
     except FileNotFoundError as exc:
         print(str(exc), file=sys.stderr)
         return 2
+    patterns = root / ".engineering" / "patterns.md"
+    if not patterns.exists():
+        patterns.write_text(PATTERNS_TEMPLATE, encoding="utf-8")
+        print(".engineering/patterns.md: installed starter catalog")
     for path, status in install_integrations(root, config).items():
         print(f"{path}: {status}")
     return 0
@@ -118,6 +138,11 @@ def command_doctor(args: Namespace) -> int:
         checks["repository_config"] = {"ok": False, "detail": str(exc)}
     architecture = root / ".engineering" / "architecture.yaml"
     checks["architecture_model"] = {"ok": architecture.exists(), "detail": str(architecture.relative_to(root))}
+    patterns = root / ".engineering" / "patterns.md"
+    checks["pattern_catalog"] = {
+        "ok": patterns.exists(),
+        "detail": ".engineering/patterns.md" if patterns.exists() else "missing; run aplomo install",
+    }
     if config:
         expected = generated_files(config)
         for relative, content in expected.items():

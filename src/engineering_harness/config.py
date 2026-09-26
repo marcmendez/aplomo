@@ -15,6 +15,7 @@ class HarnessConfig:
     agents: List[str] = field(default_factory=list)
     technologies: List[str] = field(default_factory=list)
     integrations: Dict[str, bool] = field(default_factory=lambda: {"hooks": True, "mcp": True, "skills": True})
+    context: Dict[str, int] = field(default_factory=lambda: {"max_files": 80, "max_chars": 200_000, "max_matches": 12})
 
     @classmethod
     def load(cls, root: Path) -> "HarnessConfig":
@@ -28,6 +29,7 @@ class HarnessConfig:
             agents=list(data.get("agents", [])),
             technologies=list(data.get("technologies", [])),
             integrations=dict(data.get("integrations", {"hooks": True, "mcp": True, "skills": True})),
+            context={key: int(value) for key, value in data.get("context", {"max_files": 80, "max_chars": 200_000, "max_matches": 12}).items()},
         )
 
     def dump(self) -> str:
@@ -42,6 +44,8 @@ class HarnessConfig:
             "integrations:",
         ]
         lines.extend(f"  {key}: {'true' if value else 'false'}" for key, value in self.integrations.items())
+        lines.append("context:")
+        lines.extend(f"  {key}: {value}" for key, value in self.context.items())
         return "\n".join(lines) + "\n"
 
 
@@ -54,7 +58,12 @@ def _parse_simple_yaml(text: str):
             continue
         if line.startswith("  ") and section:
             key, value = line.strip().split(":", 1)
-            result.setdefault(section, {})[key] = value.strip().lower() == "true"
+            nested = value.strip()
+            if nested.lower() in {"true", "false"}:
+                parsed = nested.lower() == "true"
+            else:
+                parsed = int(nested) if nested.isdigit() else nested
+            result.setdefault(section, {})[key] = parsed
             continue
         key, value = line.split(":", 1)
         value = value.strip()

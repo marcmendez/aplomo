@@ -5,3 +5,5 @@ rules:
   forbid_cycles: true
   require_tests_for_code_changes: true
   prefer_existing_patterns: true
+  require_abstraction_justification: true
+  bounded_context_reads: true

@@ -3,4 +3,4 @@ description: Apply the repository's Aplomo engineering workflow
 alwaysApply: true
 ---
 
-Treat `.engineering/` as the source of truth. For non-trivial code changes, call `aplomo_prepare_change` once before implementation, prefer existing patterns, respect reported boundaries, add focused tests, and call `aplomo_review_diff` once before completion. Keep the workflow proportional. Update `.engineering/config.yaml` and run `aplomo install` instead of editing generated integrations.
+Treat `.engineering/` as the source of truth. For non-trivial code changes, call `aplomo_prepare_change` once, prefer canonical implementations from `.engineering/patterns.md`, and respect the context budget and reported boundaries. Before adding a class, service, interface, or module, call `aplomo_validate_abstraction`; reuse a candidate or justify the different responsibility or lifecycle. Add focused tests, then call `aplomo_review_diff` and resolve duplicate-abstraction warnings. Keep the workflow proportional. Update `.engineering/config.yaml` and run `aplomo install` instead of editing generated integrations.

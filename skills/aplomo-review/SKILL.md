@@ -7,12 +7,13 @@ description: Review non-trivial repository plans, architecture choices, pattern 
 
 Use the smallest amount of repository context needed for the task.
 
-1. Prepare the request with the relevant modules, boundaries, and existing patterns.
-2. Prefer an existing implementation or convention that can be extended.
-3. Implement or review the smallest compatible change with focused tests.
-4. Inspect the final diff and run the relevant validation.
+1. Prepare the request with the relevant modules, boundaries, pattern catalog, and bounded existing-pattern search.
+2. Prefer a canonical or existing implementation that can be extended.
+3. Before adding a class, service, interface, or module, validate the abstraction. Reuse a candidate or explain why its responsibility or lifecycle is materially different.
+4. Implement or review the smallest compatible change with focused tests.
+5. Inspect the final diff, resolve duplicate-abstraction warnings, and run the relevant validation.
 
-When the Aplomo MCP server is available, call `aplomo_prepare_change` once before implementation and `aplomo_review_diff` once before completion. Use the more granular tools only when deeper analysis is needed. When MCP is not available, perform the same workflow with the agent's native repository search, file inspection, Git diff, and test tools.
+When the Aplomo MCP server is available, call `aplomo_prepare_change` once before implementation, `aplomo_validate_abstraction` before introducing an abstraction, and `aplomo_review_diff` once before completion. Respect the returned read budget; widen a search deliberately only when its truncated result is insufficient. Use the more granular tools only when deeper analysis is needed. When MCP is not available, perform the same workflow with the agent's native repository search, file inspection, Git diff, and test tools.
 
 Treat `.engineering/` as authoritative when the repository contains it. Do not edit generated agent adapters directly; update `.engineering/config.yaml` and run `aplomo install`.
 

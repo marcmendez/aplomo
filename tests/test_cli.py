@@ -23,6 +23,7 @@ class CliTests(unittest.TestCase):
                 code = main(["init", "--root", str(root), "--agents", "cursor", "codex"])
             self.assertEqual(code, 0)
             self.assertTrue((root / ".engineering/config.yaml").exists())
+            self.assertTrue((root / ".engineering/patterns.md").exists())
             self.assertTrue((root / ".cursor/hooks.json").exists())
             self.assertTrue((root / ".codex/hooks.json").exists())
             self.assertIn("aplomo:start", (root / "AGENTS.md").read_text(encoding="utf-8"))
@@ -75,6 +76,20 @@ class CliTests(unittest.TestCase):
                 self.assertEqual((root / relative).read_text(encoding="utf-8"), content)
             self.assertEqual((root / "AGENTS.md").read_text(encoding="utf-8").count("aplomo:start"), 1)
             self.assertEqual((root / "CLAUDE.md").read_text(encoding="utf-8").count("aplomo:start"), 1)
+
+    def test_install_migrates_an_existing_repository_with_a_pattern_catalog(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_dir = root / ".engineering"
+            config_dir.mkdir()
+            (config_dir / "config.yaml").write_text(
+                HarnessConfig(project_name="demo", agents=["codex"]).dump(), encoding="utf-8"
+            )
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(main(["install", "--root", str(root)]), 0)
+            catalog = config_dir / "patterns.md"
+            self.assertTrue(catalog.exists())
+            self.assertIn("Canonical implementation", catalog.read_text(encoding="utf-8"))
 
     def test_legacy_agents_marker_is_migrated_without_duplication(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -160,6 +175,7 @@ class CliTests(unittest.TestCase):
             architecture = root / ".engineering/architecture.yaml"
             architecture.parent.mkdir()
             architecture.write_text("version: 1\n", encoding="utf-8")
+            (root / ".engineering/patterns.md").write_text("# Retry pattern\n", encoding="utf-8")
             result = call_tool(
                 root,
                 "aplomo_prepare_change",
@@ -167,6 +183,21 @@ class CliTests(unittest.TestCase):
             )
             self.assertEqual(result["existing_patterns"]["matches"][0]["path"], "src/retry.py")
             self.assertEqual(result["architecture"], "version: 1\n")
+            self.assertEqual(result["pattern_catalog"], "# Retry pattern\n")
+            self.assertEqual(result["read_budget"]["max_files"], 80)
+
+    def test_validate_abstraction_tool_requires_reuse_or_justification(self):
+        from engineering_harness.mcp_server import call_tool
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "retry.py").write_text("class RetryPolicy:\n    pass\n", encoding="utf-8")
+            result = call_tool(
+                root,
+                "aplomo_validate_abstraction",
+                {"proposed_name": "InvoiceRetryPolicy", "responsibility": "retry failed invoices"},
+            )
+            self.assertEqual(result["status"], "needs_justification")
 
     def test_eval_command_reports_all_acceptance_checks(self):
         output = io.StringIO()

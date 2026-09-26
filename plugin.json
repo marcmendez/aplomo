@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "aplomo",
-  "version": "1.0.0",
-  "description": "A repository-aware engineering workflow for coding agents.",
+  "version": "1.1.0",
+  "description": "Reuse repository patterns and stop duplicate abstractions across coding agents.",
   "author": {
     "name": "Marc Mendez",
     "url": "https://github.com/marcmendez"
@@ -15,8 +15,8 @@
     "com.openai": {
       "interface": {
         "displayName": "Aplomo",
-        "shortDescription": "Keep coding agents aligned with repository conventions.",
-        "longDescription": "Aplomo guides coding agents to understand module boundaries, reuse existing patterns, review implementation plans, and inspect final diffs before completing non-trivial repository changes.",
+        "shortDescription": "Reuse patterns and stop duplicate abstractions.",
+        "longDescription": "Aplomo gives coding agents a bounded repository preflight, a catalog of canonical design patterns, a reuse-or-justify gate for new abstractions, and a final duplicate and validation review.",
         "developerName": "Marc Mendez",
         "category": "Developer Tools",
         "capabilities": ["Read"],

@@ -1,15 +1,15 @@
 {
   "name": "aplomo",
-  "version": "1.0.0",
-  "description": "A repository-aware engineering workflow for coding agents.",
+  "version": "1.1.0",
+  "description": "Reuse repository patterns and stop duplicate abstractions across coding agents.",
   "author": {
     "name": "Marc Mendez"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "Aplomo",
-    "shortDescription": "Keep coding agents aligned with repository conventions.",
-    "longDescription": "Understand repository boundaries, reuse existing patterns, review plans, and inspect final diffs before completing non-trivial changes.",
+    "shortDescription": "Reuse patterns and stop duplicate abstractions.",
+    "longDescription": "Use bounded repository reads, canonical design patterns, a reuse-or-justify gate, and final duplicate validation before completing non-trivial changes.",
     "developerName": "Marc Mendez",
     "category": "Developer Tools",
     "capabilities": ["Read"],

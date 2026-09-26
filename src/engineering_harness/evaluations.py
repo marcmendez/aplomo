@@ -103,10 +103,21 @@ def _evaluate_mcp() -> str:
         assert initialized["result"]["serverInfo"]["name"] == "aplomo"
         listed = dispatch(root, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
         names = {tool["name"] for tool in listed["result"]["tools"]}
-        assert {"aplomo_prepare_change", "aplomo_understand_repo", "aplomo_find_existing_patterns", "aplomo_review_plan", "aplomo_review_diff"} <= names
+        assert {"aplomo_prepare_change", "aplomo_validate_abstraction", "aplomo_understand_repo", "aplomo_find_existing_patterns", "aplomo_review_plan", "aplomo_review_diff"} <= names
         called = dispatch(root, {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "aplomo_review_plan", "arguments": {"plan": "Search existing patterns, change one module compatibly, and run tests."}}})
         assert json.loads(called["result"]["content"][0]["text"])["status"] == "pass"
-    return "initialize, list, and call succeed"
+        (root / "retry.py").write_text("class RetryPolicy:\n    pass\n", encoding="utf-8")
+        validated = dispatch(root, {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+                "name": "aplomo_validate_abstraction",
+                "arguments": {"proposed_name": "InvoiceRetryPolicy", "responsibility": "retry failed invoices"},
+            },
+        })
+        assert json.loads(validated["result"]["content"][0]["text"])["status"] == "needs_justification"
+    return "initialize, list, plan review, and abstraction gate succeed"
 
 
 def _evaluate_runtime_launch() -> str:

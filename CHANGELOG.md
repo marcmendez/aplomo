@@ -2,6 +2,14 @@
 
 All notable changes are documented here. Aplomo follows Semantic Versioning.
 
+## 1.1.0 - 2026-09-26
+
+- Add a repository-owned design-pattern catalog at `.engineering/patterns.md`.
+- Add configurable file, character, and match budgets with consumption and truncation reporting.
+- Add `aplomo_validate_abstraction` to require reuse or an explicit justification.
+- Detect duplicate class, interface, and type declarations in tracked and untracked changes.
+- Make reuse-before-create and read management the primary documented workflow.
+
 ## 1.0.0 - 2026-09-26
 
 - Add a portable Agent Plugin manifest and reusable review skill.

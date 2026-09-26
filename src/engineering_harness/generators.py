@@ -150,11 +150,12 @@ AGENTS_BLOCK = """
 The engineering source of truth is `.engineering/`. For non-trivial code changes:
 
 1. Call `aplomo_prepare_change` once with the request and a focused search query.
-2. Prefer extending a matching implementation over adding another abstraction.
-3. Keep the change inside the reported module boundaries and add focused tests.
-4. Call `aplomo_review_diff` once before completion.
+2. Read `.engineering/patterns.md` from that result and prefer its canonical implementations.
+3. Before adding a class, service, interface, or module, call `aplomo_validate_abstraction`. Reuse a candidate or record why the responsibility or lifecycle is materially different.
+4. Keep the change inside the reported module boundaries and add focused tests.
+5. Call `aplomo_review_diff` once before completion and resolve duplicate-abstraction warnings.
 
-Keep this proportional: trivial documentation or formatting edits do not need the full workflow.
+Respect the configured context budget. Widen a search deliberately only when the bounded result is insufficient. Keep this proportional: trivial documentation or formatting edits do not need the full workflow.
 
 Do not edit generated agent integrations directly. Update `.engineering/config.yaml` and run `aplomo install`.
 """
@@ -162,7 +163,7 @@ Do not edit generated agent integrations directly. Update `.engineering/config.y
 CLAUDE_BLOCK = """
 ## Aplomo
 
-Treat `.engineering/` as the repository's engineering source of truth. For a non-trivial code change, call `aplomo_prepare_change` once before implementation and `aplomo_review_diff` once before completion. Prefer existing patterns, respect the reported boundaries, and add focused tests. Keep the workflow proportional; trivial documentation or formatting edits do not need it. Edit `.engineering/config.yaml` and run `aplomo install` instead of editing generated integrations.
+Treat `.engineering/` as the repository's engineering source of truth. For a non-trivial code change, call `aplomo_prepare_change` once before implementation. Prefer the canonical patterns in `.engineering/patterns.md`; before adding a class, service, interface, or module, call `aplomo_validate_abstraction` and reuse a candidate or justify the different responsibility or lifecycle. Respect the context budget, reported boundaries, and add focused tests. Call `aplomo_review_diff` once before completion and resolve duplicate-abstraction warnings. Keep the workflow proportional; trivial documentation or formatting edits do not need it. Edit `.engineering/config.yaml` and run `aplomo install` instead of editing generated integrations.
 """
 
 SKILL = """---
@@ -175,9 +176,10 @@ description: Prepare and review non-trivial code changes against repository conv
 Use this workflow for non-trivial code changes:
 
 1. Call `aplomo_prepare_change` once with the user's request and a focused pattern query.
-2. Prefer extending a matching implementation and respect the reported boundaries.
-3. Implement the smallest compatible change and add focused tests.
-4. Call `aplomo_review_diff` once before declaring completion.
+2. Prefer the canonical patterns in `.engineering/patterns.md` and respect the reported boundaries.
+3. Before adding a class, service, interface, or module, call `aplomo_validate_abstraction`; reuse a candidate or justify a materially different responsibility or lifecycle.
+4. Implement the smallest compatible change and add focused tests without exceeding the context budget unless a wider read is necessary.
+5. Call `aplomo_review_diff` once before declaring completion and resolve duplicate-abstraction warnings.
 
 The repository's `.engineering/` directory is authoritative. Agent-specific files are generated adapters. Keep the workflow proportional: trivial documentation or formatting edits do not need the full review.
 """
@@ -187,5 +189,5 @@ description: Apply the repository's Aplomo engineering workflow
 alwaysApply: true
 ---
 
-Treat `.engineering/` as the source of truth. For non-trivial code changes, call `aplomo_prepare_change` once before implementation, prefer existing patterns, respect reported boundaries, add focused tests, and call `aplomo_review_diff` once before completion. Keep the workflow proportional. Update `.engineering/config.yaml` and run `aplomo install` instead of editing generated integrations.
+Treat `.engineering/` as the source of truth. For non-trivial code changes, call `aplomo_prepare_change` once, prefer canonical implementations from `.engineering/patterns.md`, and respect the context budget and reported boundaries. Before adding a class, service, interface, or module, call `aplomo_validate_abstraction`; reuse a candidate or justify the different responsibility or lifecycle. Add focused tests, then call `aplomo_review_diff` and resolve duplicate-abstraction warnings. Keep the workflow proportional. Update `.engineering/config.yaml` and run `aplomo install` instead of editing generated integrations.
 """

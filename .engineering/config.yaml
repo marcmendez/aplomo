@@ -7,3 +7,7 @@ integrations:
   hooks: true
   mcp: true
   skills: true
+context:
+  max_files: 80
+  max_chars: 200000
+  max_matches: 12

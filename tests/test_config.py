@@ -13,6 +13,7 @@ class HarnessConfigTests(unittest.TestCase):
             agents=["cursor", "codex"],
             technologies=["Python", "FastAPI", "PostgreSQL"],
             integrations={"hooks": True, "mcp": True, "skills": False},
+            context={"max_files": 40, "max_chars": 100_000, "max_matches": 8},
         )
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
