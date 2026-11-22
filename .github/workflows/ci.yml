@@ -46,3 +46,6 @@ jobs:
           git -C "$repo" init -q
           aplomo init --root "$repo" --agents cursor codex claude
           aplomo doctor --root "$repo"
+          test -f "$repo/.agents/skills/aplomo-review/SKILL.md"
+          test ! -e "$repo/.codex/config.toml"
+          aplomo prepare "Find a reusable retry policy" --query RetryPolicy --root "$repo"

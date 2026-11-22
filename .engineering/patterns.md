@@ -2,7 +2,7 @@
 
 ## Agent adapter generation
 
-- Responsibility: translate `.engineering/config.yaml` into native Cursor, Codex, and Claude Code files.
+- Responsibility: install the shared review skill in each assistant's project directory and generate optional integrations from `.engineering/config.yaml`.
 - Canonical implementation: `src/engineering_harness/generators.py`
 - Extend when: adding an agent surface, instruction, hook, skill, or MCP adapter.
 - Create a new abstraction only when: generation requires a separate lifecycle or ownership model.

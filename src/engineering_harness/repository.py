@@ -8,6 +8,7 @@ import ast
 import re
 import subprocess
 
+from .config import context_budget
 from .detection import detect_repository
 
 
@@ -125,6 +126,64 @@ def find_existing_patterns(
         "matches": matches[:limit],
         "read_summary": _read_summary(len(files), files_read, chars_read, max_files, max_chars, stop_reason),
     }
+
+
+def prepare_change(root: Path, request: str, query: str = "") -> Dict[str, Any]:
+    query = query.strip() or _search_query(request)
+    budget = context_budget(root)
+    map_files = max(1, budget["max_files"] // 2)
+    map_chars = max(1, budget["max_chars"] // 2)
+    pattern_files = budget["max_files"] - map_files
+    pattern_chars = budget["max_chars"] - map_chars
+    architecture = root / ".engineering" / "architecture.yaml"
+    catalog = root / ".engineering" / "patterns.md"
+    repository = understand_repo(root, map_files, map_chars)
+    patterns = find_existing_patterns(
+        root, query, budget["max_matches"], max(1, pattern_files), max(1, pattern_chars)
+    )
+    if patterns["matches"]:
+        gate_status = "reuse_or_justify"
+    elif patterns["read_summary"]["truncated"]:
+        gate_status = "inconclusive"
+    else:
+        gate_status = "no_candidate_in_budget"
+    return {
+        "request": request,
+        "repository": repository,
+        "existing_patterns": patterns,
+        "architecture": read_metadata(architecture, 20_000),
+        "pattern_catalog": read_metadata(catalog, 20_000),
+        "read_budget": budget,
+        "abstraction_gate": {
+            "status": gate_status,
+            "requirement": "Extend a matching pattern or validate the new abstraction with an explicit justification.",
+        },
+        "guidance": [
+            "Extend an existing pattern when one matches the request.",
+            "Keep changes inside the declared module boundaries.",
+            "Add focused tests and inspect the final diff.",
+        ],
+    }
+
+
+def _search_query(request: str) -> str:
+    words = re.findall(r"[A-Za-z][A-Za-z0-9_]{3,}", request)
+    ignored = {
+        "add", "create", "implement", "make", "with", "from", "that", "this", "while",
+        "existing", "current", "public", "tests", "support", "feature", "change",
+    }
+    useful = [word for word in words if word.lower() not in ignored]
+    return " ".join(useful[:4]) or request.strip()
+
+
+def read_metadata(path: Path, limit: int) -> str | None:
+    if path.is_symlink() or not path.is_file():
+        return None
+    try:
+        with path.open("r", encoding="utf-8", errors="ignore") as stream:
+            return stream.read(limit)
+    except OSError:
+        return None
 
 
 def validate_new_abstraction(

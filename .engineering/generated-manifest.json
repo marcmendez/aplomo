@@ -3,16 +3,10 @@
   "generator": "aplomo",
   "files": [
     ".agents/skills/aplomo-review/SKILL.md",
-    ".claude/settings.json",
     ".claude/skills/aplomo-review/SKILL.md",
-    ".codex/config.toml",
-    ".codex/hooks.json",
-    ".cursor/hooks.json",
-    ".cursor/mcp.json",
     ".cursor/rules/aplomo.mdc",
-    ".engineering/aplomo-runtime",
+    ".cursor/skills/aplomo-review/SKILL.md",
     ".gitignore",
-    ".mcp.json",
     "AGENTS.md",
     "CLAUDE.md"
   ]

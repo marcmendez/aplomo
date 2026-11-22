@@ -20,7 +20,7 @@ class CliTests(unittest.TestCase):
             (root / "pyproject.toml").write_text('[project]\nname="demo"\ndependencies=["fastapi"]\n', encoding="utf-8")
             output = io.StringIO()
             with redirect_stdout(output):
-                code = main(["init", "--root", str(root), "--agents", "cursor", "codex"])
+                code = main(["init", "--root", str(root), "--agents", "cursor", "codex", "--mcp", "--hooks"])
             self.assertEqual(code, 0)
             self.assertTrue((root / ".engineering/config.yaml").exists())
             self.assertTrue((root / ".engineering/patterns.md").exists())
@@ -43,7 +43,7 @@ class CliTests(unittest.TestCase):
             existing.parent.mkdir(parents=True)
             existing.write_text('{"user": true}\n', encoding="utf-8")
             (root / ".engineering").mkdir()
-            config = HarnessConfig(project_name="demo", agents=["cursor"])
+            config = HarnessConfig(project_name="demo", agents=["cursor"], integrations={"hooks": True})
             statuses = install_integrations(root, config)
             self.assertIn("skipped", statuses[".cursor/hooks.json"])
             self.assertEqual(existing.read_text(encoding="utf-8"), '{"user": true}\n')
@@ -122,13 +122,61 @@ class CliTests(unittest.TestCase):
             root = Path(directory)
             with redirect_stdout(io.StringIO()):
                 self.assertEqual(main(["init", "--root", str(root), "--agents", "cursor"]), 0)
-            (root / ".cursor/hooks.json").write_text("{}\n", encoding="utf-8")
+            (root / ".cursor/skills/aplomo-review/SKILL.md").write_text("stale\n", encoding="utf-8")
             output = io.StringIO()
             with redirect_stdout(output):
                 self.assertEqual(main(["doctor", "--root", str(root), "--json"]), 1)
             report = json.loads(output.getvalue())
             self.assertFalse(report["ok"])
-            self.assertEqual(report["checks"]["integration:.cursor/hooks.json"]["detail"], "missing or stale")
+            self.assertEqual(report["checks"]["integration:.cursor/skills/aplomo-review/SKILL.md"]["detail"], "missing or stale")
+
+    def test_skill_only_init_and_doctor_do_not_require_a_server(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with redirect_stdout(io.StringIO()), patch("engineering_harness.cli.mcp_smoke_test") as smoke:
+                self.assertEqual(main(["init", "--root", str(root), "--agents", "cursor", "codex", "claude"]), 0)
+                self.assertEqual(main(["doctor", "--root", str(root)]), 0)
+                smoke.assert_not_called()
+            self.assertFalse((root / LAUNCHER).exists())
+            self.assertFalse((root / ".engineering/events.jsonl").exists())
+            self.assertIn("Aplomo review skill", (root / "AGENTS.md").read_text(encoding="utf-8"))
+
+    def test_disabling_mcp_removes_unmodified_adapters_and_preserves_custom_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            agents = ["cursor", "codex", "claude"]
+            install_integrations(root, HarnessConfig(agents=agents, integrations={"mcp": True}))
+            custom = root / ".cursor/mcp.json"
+            custom.write_text('{"mcpServers":{"team":{"command":"team-tool"}}}\n', encoding="utf-8")
+            statuses = install_integrations(root, HarnessConfig(agents=agents))
+            self.assertIn("preserved", statuses[".cursor/mcp.json"])
+            self.assertIn("team-tool", custom.read_text(encoding="utf-8"))
+            self.assertFalse((root / ".codex/config.toml").exists())
+            self.assertFalse((root / ".mcp.json").exists())
+            self.assertFalse((root / LAUNCHER).exists())
+            self.assertNotIn("aplomo_prepare_change", (root / "AGENTS.md").read_text(encoding="utf-8"))
+
+    def test_local_analysis_commands_match_mcp_results(self):
+        import subprocess
+        from engineering_harness.mcp_server import call_tool
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            (root / "retry.py").write_text("class RetryPolicy:\n    pass\n", encoding="utf-8")
+            cases = [
+                (["prepare", "Add retries", "--query", "RetryPolicy"], "aplomo_prepare_change",
+                 {"request": "Add retries", "query": "RetryPolicy"}),
+                (["validate-abstraction", "InvoiceRetryPolicy", "retry invoices"], "aplomo_validate_abstraction",
+                 {"proposed_name": "InvoiceRetryPolicy", "responsibility": "retry invoices"}),
+                (["review-diff"], "aplomo_review_diff", {}),
+            ]
+            for command, tool, arguments in cases:
+                with self.subTest(command=command):
+                    output = io.StringIO()
+                    with redirect_stdout(output):
+                        self.assertEqual(main([*command, "--root", str(root)]), 0)
+                    self.assertEqual(json.loads(output.getvalue()), call_tool(root, tool, arguments))
 
     def test_mcp_protocol(self):
         from engineering_harness.mcp_server import dispatch

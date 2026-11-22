@@ -11,11 +11,11 @@
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-315C4A"></a>
 </p>
 
-Aplomo brings a repository's design patterns and review checks into **Cursor, Codex, and Claude Code**. When you ask for invoice retries, for example, the agent can find your shared retry policy, inspect where it is already used, and decide whether to extend it before writing another implementation.
+Aplomo is a review skill with optional local checks for **Cursor, Codex, and Claude Code**. It helps an agent find the code your team already relies on, extend it where it fits, and review the resulting diff.
 
-## Quick start
+## Install
 
-Requires Python 3.12+, Git, and [uv](https://docs.astral.sh/uv/) or pipx.
+With Python 3.12+, Git, and [uv](https://docs.astral.sh/uv/), install the CLI and initialize the project:
 
 ```bash
 uv tool install --python 3.12 git+https://github.com/marcmendez/aplomo.git
@@ -23,40 +23,62 @@ cd your-repository
 aplomo init --agents codex
 ```
 
-Choose the assistants you use. Run `aplomo init --agents cursor codex claude` to configure all three. Open the project again and approve its project-level configuration if your assistant prompts you. Add a real entry to `.engineering/patterns.md` that links a shared implementation and its tests.
+Replace `codex` with `cursor` or `claude`, or pass all three. Open the repository in your assistant and select the Aplomo review skill.
 
-Then ask for changes as usual:
-
-> Add invoice retries for transient failures and cover the retry limits with tests.
-
-| Assistant | What Aplomo installs | Setup |
+| Assistant | Invoke the project skill | Guide |
 | --- | --- | --- |
-| Cursor | Project rule, MCP configuration, hooks | [Cursor and Cursor Cloud](docs/cursor.md) |
-| Codex | `AGENTS.md` instructions, skill, MCP configuration, hooks | [Codex](docs/codex.md) |
-| Claude Code | `CLAUDE.md` instructions, skill, MCP configuration, hooks | [Claude Code](docs/claude-code.md) |
+| Codex | `$aplomo-review` | [Codex](docs/codex.md) |
+| Cursor | Select `aplomo-review` from the `/` menu | [Cursor and Cursor Cloud](docs/cursor.md) |
+| Claude Code | `/aplomo-review` | [Claude Code](docs/claude-code.md) |
 
-## From request to diff
+If you only want the workflow, copy the [standalone skill](skills/aplomo-review/SKILL.md) into your assistant's project skill directory, as shown in the guides. It uses the assistant's native search, Git, and test commands. The CLI adds installation and repeatable local checks.
 
-1. **Before editing**, the agent requests a repository summary and a bounded search for candidate patterns. The result includes file locations, the pattern catalog, and the project architecture notes.
-2. **Before adding an abstraction**, the agent looks for an existing implementation to extend or explains why the new responsibility or lifecycle deserves its own implementation.
-3. **Before handing back the change**, the agent reviews the diff and runs focused tests. Aplomo can flag duplicate declaration names, code changes without accompanying test edits, and possible secrets.
+## Example: add invoice retries
 
-The checks are advisory. Candidate search is lexical, so equivalent implementations with different names can be missed. Architecture notes guide the agent. Use your existing tests and CI to enforce rules that must block a merge. [Patterns, statuses, and read budgets](docs/patterns-and-read-budgets.md)
+In `.engineering/patterns.md`, record a shared implementation your project actually uses. For example:
 
-The full integration runs a local MCP subprocess in the assistant's environment. Its tools analyze the checkout and return results to the assistant. Lifecycle hooks record events in a gitignored file. A portable [review skill](skills/aplomo-review/SKILL.md) also describes the workflow using native search, Git, and tests when MCP is unavailable. [Privacy](PRIVACY.md)
+```markdown
+## Retry policy
+
+- Responsibility: decide which failures to retry and when to stop.
+- Canonical implementation: `src/shared/retry.py`.
+- Existing caller: `src/payments/charge.py`.
+- Extend when: the new workflow uses the same failure classification and retry limits.
+- Validation: `pytest tests/test_retry.py`.
+```
+
+Select the skill and ask:
+
+> Add invoice retries for transient failures. Preserve payment retry behavior and test that invoice retries stop at the configured limit.
+
+Before editing, the skill directs the agent to find the policy and a real caller. If the invoice workflow shares the same rules, the agent can extend or reuse the policy. If it needs a different lifecycle, the agent explains where that logic belongs. Before finishing, it reviews the diff for duplicate responsibilities, unrelated changes, and redundant comments, then runs the project's relevant tests.
+
+## Run local checks
+
+The skill can call these commands from the checkout. You can also run them yourself:
+
+```bash
+aplomo prepare "Add invoice retries" --query "RetryPolicy"
+aplomo validate-abstraction "InvoiceRetryPolicy" "Handle transient invoice failures"
+aplomo review-diff
+```
+
+The commands return JSON with the evidence they found. Candidate search is lexical and diff warnings are advisory. Repository architecture notes guide the agent. Use project tests or CI for rules that must block a merge. See [patterns and read budgets](docs/patterns-and-read-budgets.md) for status meanings and limits.
+
+## Optional MCP and hooks
+
+The default installation uses the skill and local commands. To register Aplomo's analysis as MCP tools in a new project, use `aplomo init --agents codex --mcp`. Add `--hooks` if you want lifecycle events recorded in a local, gitignored log. These flags are independent.
+
+For an existing project, edit `.engineering/config.yaml` and run `aplomo install`. To switch an older installation to the skill-based setup, set `integrations.mcp` and `integrations.hooks` to `false`. Aplomo removes unchanged adapters it owns. If a file has been customized, it is preserved and the installer reports it so you can remove the obsolete Aplomo entry yourself. Restart the assistant after changing its integrations. [Privacy](PRIVACY.md)
 
 ## Repository layout
 
 | Path | Purpose |
 | --- | --- |
-| `.engineering/config.yaml` | Agents, integrations, and read budgets |
-| `.engineering/patterns.md` | Canonical implementations and the conditions for extending them |
-| `.engineering/architecture.yaml` | Project boundaries and engineering rules |
-| [`src/engineering_harness/`](src/engineering_harness/) | Python CLI, repository analysis, and MCP adapter |
-| [`tests/`](tests/) | Unit and integration tests |
-| [`docs/`](docs/) | Setup and workflow guides |
-
-Run `aplomo install` after changing project configuration. Machine-specific launchers and event logs stay out of Git. If an existing adapter belongs to your project, the installer reports the conflict so you can merge it.
+| `.engineering/` | Project patterns, architecture notes, and integration settings |
+| [`skills/aplomo-review/`](skills/aplomo-review/) | Shared review workflow for all three assistants |
+| [`src/engineering_harness/`](src/engineering_harness/) | Python CLI, local analysis, and optional MCP adapter |
+| [`tests/`](tests/) and [`docs/`](docs/) | Tests and assistant setup guides |
 
 ## Development
 

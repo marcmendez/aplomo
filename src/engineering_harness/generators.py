@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Dict, Iterable
 import json
@@ -26,9 +27,9 @@ def _mcp_server() -> Dict[str, object]:
 
 def generated_files(config: HarnessConfig) -> Dict[str, str]:
     files: Dict[str, str] = {}
-    if config.integrations.get("hooks", True) or config.integrations.get("mcp", True):
+    if config.agents and (config.integrations.get("hooks", False) or config.integrations.get("mcp", False)):
         files[LAUNCHER] = launcher_content()
-    if config.integrations.get("hooks", True):
+    if config.integrations.get("hooks", False):
         if "cursor" in config.agents:
             files[".cursor/hooks.json"] = _json({
                 "version": 1,
@@ -56,7 +57,7 @@ def generated_files(config: HarnessConfig) -> Dict[str, str]:
                 },
             })
 
-    if config.integrations.get("mcp", True):
+    if config.integrations.get("mcp", False):
         if "cursor" in config.agents:
             files[".cursor/mcp.json"] = _json({"mcpServers": {"aplomo": _mcp_server()}})
         if "claude" in config.agents:
@@ -69,20 +70,40 @@ def generated_files(config: HarnessConfig) -> Dict[str, str]:
                 'args = ["mcp", "--root", "."]\n'
             )
 
-    if config.integrations.get("skills", True):
+    if config.agents and config.integrations.get("skills", True):
+        skill = Path(__file__).with_name("aplomo_review.md")
+        if not skill.is_file():
+            skill = Path(__file__).resolve().parents[2] / "skills/aplomo-review/SKILL.md"
+        instructions = skill.read_text(encoding="utf-8")
         if "cursor" in config.agents:
             files[".cursor/rules/aplomo.mdc"] = CURSOR_RULE
+            files[".cursor/skills/aplomo-review/SKILL.md"] = instructions
         if "codex" in config.agents:
-            files[".agents/skills/aplomo-review/SKILL.md"] = SKILL
+            files[".agents/skills/aplomo-review/SKILL.md"] = instructions
         if "claude" in config.agents:
-            files[".claude/skills/aplomo-review/SKILL.md"] = SKILL
+            files[".claude/skills/aplomo-review/SKILL.md"] = instructions
     return files
 
 
 def install_integrations(root: Path, config: HarnessConfig) -> Dict[str, str]:
     statuses: Dict[str, str] = {}
     previous_manifest = _read_manifest(root)
-    for relative, content in generated_files(config).items():
+    expected = generated_files(config)
+    optional = generated_files(replace(
+        config, agents=["cursor", "claude", "codex"],
+        integrations={"hooks": True, "mcp": True, "skills": False},
+    ))
+    for relative in sorted((optional.keys() - expected.keys()) & set(previous_manifest)):
+        path = root / relative
+        if path.is_symlink():
+            statuses[relative] = "preserved (link; remove obsolete configuration manually)"
+        elif path.is_file():
+            if path.read_text(encoding="utf-8") == optional[relative].replace("\r\n", "\n"):
+                path.unlink()
+                statuses[relative] = "removed (disabled integration)"
+            else:
+                statuses[relative] = "preserved (modified; remove obsolete configuration manually)"
+    for relative, content in expected.items():
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists() and relative not in previous_manifest and path.read_text(encoding="utf-8") != content:
@@ -92,10 +113,10 @@ def install_integrations(root: Path, config: HarnessConfig) -> Dict[str, str]:
         if relative == LAUNCHER:
             make_launcher_executable(path)
         statuses[relative] = "installed"
-    if "codex" in config.agents:
+    if "codex" in config.agents and config.integrations.get("skills", True):
         statuses["AGENTS.md"] = _merge_instruction_file(root / "AGENTS.md", AGENTS_BLOCK)
-    if "claude" in config.agents:
-        statuses["CLAUDE.md"] = _merge_instruction_file(root / "CLAUDE.md", CLAUDE_BLOCK)
+    if "claude" in config.agents and config.integrations.get("skills", True):
+        statuses["CLAUDE.md"] = _merge_instruction_file(root / "CLAUDE.md", AGENTS_BLOCK)
     statuses[".gitignore"] = _merge_gitignore(root / ".gitignore")
     manifest_path = root / ".engineering" / "generated-manifest.json"
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -147,47 +168,15 @@ def _json(value: object) -> str:
 AGENTS_BLOCK = """
 ## Aplomo
 
-The engineering source of truth is `.engineering/`. For non-trivial code changes:
+For non-trivial code changes, use the Aplomo review skill. Follow the repository patterns and boundaries in `.engineering/`, search for code to reuse before adding an abstraction, and run focused checks on the final diff.
 
-1. Call `aplomo_prepare_change` once with the request and a focused search query.
-2. Read `.engineering/patterns.md` from that result and prefer its canonical implementations.
-3. Before adding a class, service, interface, or module, call `aplomo_validate_abstraction`. Reuse a candidate or record why the responsibility or lifecycle is materially different.
-4. Keep the change inside the reported module boundaries and add focused tests.
-5. Call `aplomo_review_diff` once before completion and resolve duplicate-abstraction warnings.
-
-Respect the configured context budget. Widen a search deliberately only when the bounded result is insufficient. Keep this proportional: trivial documentation or formatting edits do not need the full workflow.
-
-Do not edit generated agent integrations directly. Update `.engineering/config.yaml` and run `aplomo install`.
-"""
-
-CLAUDE_BLOCK = """
-## Aplomo
-
-Treat `.engineering/` as the repository's engineering source of truth. For a non-trivial code change, call `aplomo_prepare_change` once before implementation. Prefer the canonical patterns in `.engineering/patterns.md`; before adding a class, service, interface, or module, call `aplomo_validate_abstraction` and reuse a candidate or justify the different responsibility or lifecycle. Respect the context budget, reported boundaries, and add focused tests. Call `aplomo_review_diff` once before completion and resolve duplicate-abstraction warnings. Keep the workflow proportional; trivial documentation or formatting edits do not need it. Edit `.engineering/config.yaml` and run `aplomo install` instead of editing generated integrations.
-"""
-
-SKILL = """---
-name: aplomo-review
-description: Prepare and review non-trivial code changes against repository conventions.
----
-
-# Aplomo review
-
-Use this workflow for non-trivial code changes:
-
-1. Call `aplomo_prepare_change` once with the user's request and a focused pattern query.
-2. Prefer the canonical patterns in `.engineering/patterns.md` and respect the reported boundaries.
-3. Before adding a class, service, interface, or module, call `aplomo_validate_abstraction`; reuse a candidate or justify a materially different responsibility or lifecycle.
-4. Implement the smallest compatible change and add focused tests without exceeding the context budget unless a wider read is necessary.
-5. Call `aplomo_review_diff` once before declaring completion and resolve duplicate-abstraction warnings.
-
-The repository's `.engineering/` directory is authoritative. Agent-specific files are generated adapters. Keep the workflow proportional: trivial documentation or formatting edits do not need the full review.
+Update `.engineering/config.yaml` and run `aplomo install` to regenerate integrations.
 """
 
 CURSOR_RULE = """---
-description: Apply the repository's Aplomo engineering workflow
+description: Use Aplomo for non-trivial code changes
 alwaysApply: true
 ---
 
-Treat `.engineering/` as the source of truth. For non-trivial code changes, call `aplomo_prepare_change` once, prefer canonical implementations from `.engineering/patterns.md`, and respect the context budget and reported boundaries. Before adding a class, service, interface, or module, call `aplomo_validate_abstraction`; reuse a candidate or justify the different responsibility or lifecycle. Add focused tests, then call `aplomo_review_diff` and resolve duplicate-abstraction warnings. Keep the workflow proportional. Update `.engineering/config.yaml` and run `aplomo install` instead of editing generated integrations.
+For non-trivial code changes, follow the Aplomo review skill at `.cursor/skills/aplomo-review/SKILL.md`. Use `.engineering/` for repository patterns and boundaries.
 """

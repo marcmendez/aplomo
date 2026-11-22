@@ -9,13 +9,13 @@ import json
 import sys
 
 from . import __version__
-from .config import HarnessConfig
+from .config import HarnessConfig, context_budget
 from .detection import detect_repository
 from .events import EventNormalizer
 from .evaluations import run_evaluations
 from .generators import generated_files, install_integrations
 from .mcp_server import run as run_mcp
-from .repository import index_repository
+from .repository import index_repository, prepare_change, review_diff, validate_new_abstraction
 from .runtime import mcp_smoke_test
 
 
@@ -53,6 +53,8 @@ def build_parser() -> ArgumentParser:
     init.add_argument("--root", type=Path, default=Path.cwd())
     init.add_argument("--agents", nargs="*", choices=["cursor", "claude", "codex"])
     init.add_argument("--no-install", action="store_true")
+    init.add_argument("--mcp", action="store_true", help="Enable the optional MCP adapter")
+    init.add_argument("--hooks", action="store_true", help="Enable optional local event logging")
     init.set_defaults(handler=command_init)
 
     install = subparsers.add_parser("install", help="Regenerate integrations from .engineering/config.yaml")
@@ -63,6 +65,23 @@ def build_parser() -> ArgumentParser:
     doctor.add_argument("--root", type=Path, default=Path.cwd())
     doctor.add_argument("--json", action="store_true")
     doctor.set_defaults(handler=command_doctor)
+
+    prepare = subparsers.add_parser("prepare", help="Find reusable patterns and repository context as JSON")
+    prepare.add_argument("request")
+    prepare.add_argument("--query", help="Focused pattern search terms")
+    prepare.add_argument("--root", type=Path, default=Path.cwd())
+    prepare.set_defaults(handler=command_analysis)
+
+    validate = subparsers.add_parser("validate-abstraction", help="Look for existing implementations as JSON")
+    validate.add_argument("name")
+    validate.add_argument("responsibility")
+    validate.add_argument("--justification", default="")
+    validate.add_argument("--root", type=Path, default=Path.cwd())
+    validate.set_defaults(handler=command_analysis)
+
+    review = subparsers.add_parser("review-diff", help="Report advisory findings on the working-tree diff as JSON")
+    review.add_argument("--root", type=Path, default=Path.cwd())
+    review.set_defaults(handler=command_analysis)
 
     hook = subparsers.add_parser("hook", help="Normalize one agent hook payload from stdin")
     hook.add_argument("--source", required=True)
@@ -84,7 +103,10 @@ def command_init(args: Namespace) -> int:
     root = args.root.resolve()
     profile = detect_repository(root)
     selected = args.agents if args.agents is not None else [name for name, detected in profile.agents.items() if detected]
-    config = HarnessConfig(project_name=root.name, agents=selected, technologies=profile.technologies)
+    config = HarnessConfig(
+        project_name=root.name, agents=selected, technologies=profile.technologies,
+        integrations={"hooks": args.hooks, "mcp": args.mcp, "skills": True},
+    )
     engineering = root / ".engineering"
     engineering.mkdir(parents=True, exist_ok=True)
     config_path = engineering / "config.yaml"
@@ -95,7 +117,8 @@ def command_init(args: Namespace) -> int:
     (engineering / "architecture.yaml").write_text(ARCHITECTURE_TEMPLATE, encoding="utf-8")
     (engineering / "patterns.md").write_text(PATTERNS_TEMPLATE, encoding="utf-8")
     (engineering / "decisions").mkdir(exist_ok=True)
-    (engineering / "events.jsonl").touch(exist_ok=True)
+    if args.hooks:
+        (engineering / "events.jsonl").touch(exist_ok=True)
 
     print("Aplomo\n")
     print("Repository detected:")
@@ -151,8 +174,8 @@ def command_doctor(args: Namespace) -> int:
                 "ok": path.exists() and path.read_text(encoding="utf-8") == content,
                 "detail": "installed and current" if path.exists() and path.read_text(encoding="utf-8") == content else "missing or stale",
             }
-        runtime = mcp_smoke_test(root)
-        checks["runtime_launch"] = runtime
+        if config.agents and config.integrations.get("mcp", False):
+            checks["runtime_launch"] = mcp_smoke_test(root)
     profile = detect_repository(root)
     index = index_repository(root)
     checks["git"] = {"ok": profile.is_git, "detail": "repository" if profile.is_git else "not initialized"}
@@ -184,6 +207,23 @@ def command_hook(args: Namespace) -> int:
     with path.open("a", encoding="utf-8") as stream:
         stream.write(encoded + "\n")
     return 0
+
+
+def command_analysis(args: Namespace) -> int:
+    root = args.root.resolve()
+    if args.command == "prepare":
+        result = prepare_change(root, args.request, args.query or "")
+    else:
+        budget = context_budget(root)
+        if args.command == "validate-abstraction":
+            result = validate_new_abstraction(
+                root, args.name, args.responsibility, args.justification,
+                budget["max_files"], budget["max_chars"], budget["max_matches"],
+            )
+        else:
+            result = review_diff(root, budget["max_files"], budget["max_chars"])
+    print(json.dumps(result, indent=2))
+    return 1 if result.get("status") == "unavailable" else 0
 
 
 def command_mcp(args: Namespace) -> int:

@@ -4,11 +4,11 @@ Aplomo uses a reuse-before-create contract for non-trivial code changes. The obj
 
 ## Request lifecycle
 
-1. `aplomo_prepare_change` maps the repository, reads its architecture and pattern catalog, and performs a bounded candidate search.
+1. The skill reads the relevant project patterns and searches for candidates. `aplomo prepare` can provide a repository summary and a bounded candidate search.
 2. The agent starts from a canonical implementation in `.engineering/patterns.md` when one applies.
-3. `aplomo_validate_abstraction` evaluates a proposed class, service, interface, or module.
+3. `aplomo validate-abstraction` looks for candidates for a proposed class, service, interface, or module.
 4. A matching candidate produces `needs_justification`. The agent must reuse it or explain the different responsibility or lifecycle.
-5. `aplomo_review_diff` checks tracked and untracked changes for duplicate declarations, tests, possible secrets, and excessive size.
+5. `aplomo review-diff` checks tracked and untracked changes for duplicate declarations, test file changes, possible secrets, and excessive size.
 
 ## Pattern catalog
 
@@ -24,7 +24,7 @@ Do not turn the catalog into general architecture documentation. Link to an ADR 
 
 ## Abstraction decisions
 
-`aplomo_validate_abstraction` returns one of four states:
+`aplomo validate-abstraction` returns one of four states:
 
 | Status | Meaning | Expected action |
 |---|---|---|

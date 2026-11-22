@@ -4,6 +4,9 @@ All notable changes are documented here. Aplomo follows Semantic Versioning.
 
 ## Unreleased
 
+- Install the shared review skill by default for Cursor, Codex, and Claude Code. MCP and lifecycle hooks are opt-in.
+- Expose the same repository analysis through local `prepare`, `validate-abstraction`, and `review-diff` commands.
+- Remove unchanged optional adapters owned by Aplomo when they are disabled and preserve customized files for manual migration.
 - Report inconclusive searches when a read limit is reached without a reuse candidate.
 - Bound and report untracked diff reads, and reuse that content to detect duplicate declarations.
 - Skip symlinked files when reading repository source and metadata.

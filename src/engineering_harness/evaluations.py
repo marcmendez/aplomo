@@ -21,6 +21,7 @@ def run_evaluations() -> Dict[str, object]:
     cases: list[tuple[str, Callable[[], str]]] = [
         ("event normalization", _evaluate_events),
         ("native agent configurations", _evaluate_agent_configs),
+        ("skill-first installation", _evaluate_skill_installation),
         ("safe installation", _evaluate_safe_installation),
         ("idempotent regeneration", _evaluate_idempotency),
         ("MCP protocol contract", _evaluate_mcp),
@@ -54,7 +55,7 @@ def _evaluate_agent_configs() -> str:
     with TemporaryDirectory() as directory:
         root = Path(directory)
         (root / ".engineering").mkdir()
-        config = HarnessConfig(project_name="eval", agents=["cursor", "claude", "codex"])
+        config = HarnessConfig(project_name="eval", agents=["cursor", "claude", "codex"], integrations={"mcp": True})
         install_integrations(root, config)
         cursor = json.loads((root / ".cursor/mcp.json").read_text(encoding="utf-8"))
         claude = json.loads((root / ".mcp.json").read_text(encoding="utf-8"))
@@ -76,10 +77,22 @@ def _evaluate_safe_installation() -> str:
         path.parent.mkdir(parents=True)
         path.write_text('{"owned_by":"user"}\n', encoding="utf-8")
         (root / ".engineering").mkdir()
-        statuses = install_integrations(root, HarnessConfig(project_name="eval", agents=["cursor"]))
+        statuses = install_integrations(root, HarnessConfig(project_name="eval", agents=["cursor"], integrations={"hooks": True}))
         assert "skipped" in statuses[".cursor/hooks.json"]
         assert path.read_text(encoding="utf-8") == '{"owned_by":"user"}\n'
     return "unmanaged configuration preserved"
+
+
+def _evaluate_skill_installation() -> str:
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        config = HarnessConfig(project_name="eval", agents=["cursor", "claude", "codex"])
+        install_integrations(root, config)
+        skills = [root / location / "skills/aplomo-review/SKILL.md" for location in (".cursor", ".claude", ".agents")]
+        assert all(path.read_bytes() == skills[0].read_bytes() for path in skills)
+        assert not (root / LAUNCHER).exists()
+        assert not any((root / path).exists() for path in (".cursor/mcp.json", ".mcp.json", ".codex/config.toml"))
+    return "all three assistants receive the same skill without an MCP server"
 
 
 def _evaluate_idempotency() -> str:
@@ -124,7 +137,7 @@ def _evaluate_runtime_launch() -> str:
     with TemporaryDirectory() as directory:
         root = Path(directory)
         (root / ".engineering").mkdir()
-        install_integrations(root, HarnessConfig(project_name="eval", agents=["codex"]))
+        install_integrations(root, HarnessConfig(project_name="eval", agents=["codex"], integrations={"mcp": True}))
         result = mcp_smoke_test(root)
         assert result["ok"], result["detail"]
         hook = subprocess.run(

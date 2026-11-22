@@ -4,8 +4,8 @@ project_name: "aplomo"
 agents: ["cursor", "claude", "codex"]
 technologies: ["Python"]
 integrations:
-  hooks: true
-  mcp: true
+  hooks: false
+  mcp: false
   skills: true
 context:
   max_files: 80

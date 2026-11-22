@@ -14,7 +14,7 @@ class HarnessConfig:
     project_name: str = "project"
     agents: List[str] = field(default_factory=list)
     technologies: List[str] = field(default_factory=list)
-    integrations: Dict[str, bool] = field(default_factory=lambda: {"hooks": True, "mcp": True, "skills": True})
+    integrations: Dict[str, bool] = field(default_factory=lambda: {"hooks": False, "mcp": False, "skills": True})
     context: Dict[str, int] = field(default_factory=lambda: {"max_files": 80, "max_chars": 200_000, "max_matches": 12})
 
     @classmethod
@@ -28,7 +28,7 @@ class HarnessConfig:
             project_name=str(data.get("project_name", root.name)),
             agents=list(data.get("agents", [])),
             technologies=list(data.get("technologies", [])),
-            integrations=dict(data.get("integrations", {"hooks": True, "mcp": True, "skills": True})),
+            integrations=dict(data.get("integrations", {})),
             context={key: int(value) for key, value in data.get("context", {"max_files": 80, "max_chars": 200_000, "max_matches": 12}).items()},
         )
 
@@ -47,6 +47,18 @@ class HarnessConfig:
         lines.append("context:")
         lines.extend(f"  {key}: {value}" for key, value in self.context.items())
         return "\n".join(lines) + "\n"
+
+
+def context_budget(root: Path) -> Dict[str, int]:
+    try:
+        configured = HarnessConfig.load(root).context
+    except (FileNotFoundError, ValueError, KeyError):
+        configured = {}
+    return {
+        "max_files": max(2, min(int(configured.get("max_files", 80)), 1_000)),
+        "max_chars": max(2_000, min(int(configured.get("max_chars", 200_000)), 5_000_000)),
+        "max_matches": max(1, min(int(configured.get("max_matches", 12)), 100)),
+    }
 
 
 def _parse_simple_yaml(text: str):
