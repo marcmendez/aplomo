@@ -1,14 +1,14 @@
 # Patterns, abstraction gates, and read budgets
 
-Aplomo uses a reuse-before-create contract for non-trivial code changes. The objective is not to ban new abstractions; it is to make the decision visible before another implementation enters the repository.
+Aplomo asks agents to look for existing implementations before adding a class, service, or module. The repository's pattern catalog records where the team expects that code to live.
 
 ## Request lifecycle
 
 1. The skill reads the relevant project patterns and searches for candidates. `aplomo prepare` can provide a repository summary and a bounded candidate search.
 2. The agent starts from a canonical implementation in `.engineering/patterns.md` when one applies.
 3. `aplomo validate-abstraction` looks for candidates for a proposed class, service, interface, or module.
-4. A matching candidate produces `needs_justification`. The agent must reuse it or explain the different responsibility or lifecycle.
-5. `aplomo review-diff` checks tracked and untracked changes for duplicate declarations, test file changes, possible secrets, and excessive size.
+4. If the search finds a candidate and no justification was supplied, it returns `needs_justification`. The agent should compare the candidate's responsibility and lifecycle with the proposed change.
+5. `aplomo review-diff` flags possible duplicate declarations, missing test edits, possible secrets, and large diffs in tracked and untracked changes.
 
 ## Pattern catalog
 
@@ -36,9 +36,7 @@ For example, a project might document its shared retry policy:
 
 ## Run local checks
 
-The skill can run these optional commands, or you can run them yourself from the repository:
-
-Install the CLI on your PATH if you want to use these commands regularly.
+Install the CLI on your PATH to run the local checks from the repository.
 
 ```bash
 uv tool install --python 3.12 git+https://github.com/marcmendez/aplomo.git
@@ -50,7 +48,7 @@ aplomo validate-abstraction "NewRetryPolicy" "Retry transient failures"
 aplomo review-diff
 ```
 
-Commands return JSON. Candidate search is lexical and diff warnings are advisory. Architecture notes guide the agent. Use project tests or CI for rules that must block a merge.
+The commands return JSON. Candidate search matches text, and diff warnings are advisory. Use project tests or CI for rules that must block a merge.
 
 ## Choose reviews
 
@@ -67,7 +65,7 @@ A contained change usually needs only inspection of the affected code and focuse
 | `needs_justification` | Candidates exist and no exception was supplied. | Reuse a candidate or provide a concrete responsibility/lifecycle difference. |
 | `review_required` | Candidates and a justification both exist. | Compare them before accepting the new abstraction. |
 
-The gate is lexical and deterministic. It surfaces evidence; it does not claim to prove semantic equivalence.
+Compare the reported candidates by reading their implementations and callers.
 
 ## Read budgets
 
@@ -98,7 +96,7 @@ The budget applies to source content read by Aplomo. Small repository-owned meta
 - Similar behavior under unrelated names may not be detected.
 - Common names can produce false-positive candidates.
 - Duplicate declaration checks currently focus on classes, interfaces, and named types.
-- Generated or vendored directories are excluded from source discovery.
+- Source discovery skips common dependency and build directories, including `node_modules`, `.venv`, `dist`, and `build`.
 - A truncated no-match result is never evidence that the repository contains no equivalent.
 
 ## Optional integrations

@@ -1,13 +1,15 @@
 # Use Aplomo with Codex
 
-Run the [one-time setup](../README.md#install) from your project root. Then open the project in Codex and make a normal request:
+Run the [setup command](../README.md#install) from the repository root. Open the repository in Codex and describe the change.
 
 > Add filtering to the projects list.
 
-Aplomo installs the skill at `.agents/skills/aplomo-review/` and adds instructions to `AGENTS.md` so Codex knows when to use it. For an explicit review, you can also type `$aplomo-review`. On first setup, append `--agents codex` if you want to select Codex regardless of detection. For a manual installation, copy the [standalone skill folder](../skills/aplomo-review/) to the project skill directory.
+The installer adds the skill at `.agents/skills/aplomo-review/`. The entry in `AGENTS.md` tells Codex to load it for features, substantial refactors, shared contract changes, and code reviews. To request the skill directly, type `$aplomo-review`.
 
-The skill runs with native Codex tools and can call the local Aplomo CLI when available. If you enable the [optional MCP adapter](../README.md#optional-mcp-and-hooks), Codex loads its project configuration in trusted projects. [Codex skills](https://learn.chatgpt.com/docs/build-skills)
+Add `--agents codex` to `aplomo init` to select Codex explicitly. If you install by copying the [skill folder](../skills/aplomo-review/) into `.agents/skills/`, use `$aplomo-review` to request a review. [Codex skills](https://learn.chatgpt.com/docs/build-skills)
+
+Codex loads the [optional MCP adapter](../README.md#optional-mcp-and-hooks) from trusted project configuration.
 
 ## Codex Cloud
 
-Commit the skill folder, `AGENTS.md`, and project guidance, then start a cloud task from a checkout that includes them. Codex can use those files with a normal request. Install the optional CLI in the cloud environment if you want the local analysis commands there. [Codex Cloud environments](https://learn.chatgpt.com/docs/environments/cloud-environments)
+Commit the skill folder, `AGENTS.md`, and any guidance in `.engineering/`. Start the cloud task from a branch that contains those files. Install the CLI in the cloud environment if you also want the local analysis commands. [Codex Cloud environments](https://learn.chatgpt.com/docs/environments/cloud-environments)
