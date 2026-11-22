@@ -5,14 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "aplomo"
 version = "1.1.0"
-description = "Reuse repository patterns and stop duplicate abstractions across coding agents"
+description = "Repository pattern search and advisory diff checks for coding agents"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 authors = [{ name = "Aplomo contributors" }]
 keywords = ["coding-agents", "mcp", "developer-tools", "architecture"]
 classifiers = [
-  "Development Status :: 5 - Production/Stable",
+  "Development Status :: 4 - Beta",
   "Environment :: Console",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",

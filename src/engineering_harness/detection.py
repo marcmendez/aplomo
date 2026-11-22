@@ -54,7 +54,7 @@ def detect_repository(root: Path) -> RepositoryProfile:
     searchable = []
     for filename in ("pyproject.toml", "requirements.txt", "package.json", "compose.yaml", "docker-compose.yml"):
         path = root / filename
-        if path.is_file() and path.stat().st_size < 2_000_000:
+        if not path.is_symlink() and path.is_file() and path.stat().st_size < 2_000_000:
             searchable.append(path.read_text(encoding="utf-8", errors="ignore").lower())
     combined = "\n".join(searchable)
     technologies.extend(name for name, needles in FRAMEWORK_MARKERS.items() if any(needle.lower() in combined for needle in needles))

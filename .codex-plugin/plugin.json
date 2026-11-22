@@ -1,14 +1,14 @@
 {
   "name": "aplomo",
   "version": "1.1.0",
-  "description": "Reuse repository patterns and stop duplicate abstractions across coding agents.",
+  "description": "Repository pattern search and advisory diff checks for coding agents.",
   "author": {
     "name": "Marc Mendez"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "Aplomo",
-    "shortDescription": "Reuse patterns and stop duplicate abstractions.",
+    "shortDescription": "Find patterns and review changes.",
     "longDescription": "Use bounded repository reads, canonical design patterns, a reuse-or-justify gate, and final duplicate validation before completing non-trivial changes.",
     "developerName": "Marc Mendez",
     "category": "Developer Tools",

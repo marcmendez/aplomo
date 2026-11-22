@@ -130,6 +130,12 @@ def call_tool(root: Path, name: str, arguments: Dict[str, Any]):
         patterns = find_existing_patterns(
             root, query, budget["max_matches"], max(1, pattern_files), max(1, pattern_chars)
         )
+        if patterns["matches"]:
+            gate_status = "reuse_or_justify"
+        elif patterns["read_summary"]["truncated"]:
+            gate_status = "inconclusive"
+        else:
+            gate_status = "no_candidate_in_budget"
         return {
             "request": request,
             "repository": repository,
@@ -138,7 +144,7 @@ def call_tool(root: Path, name: str, arguments: Dict[str, Any]):
             "pattern_catalog": _read_metadata(catalog, 20_000),
             "read_budget": budget,
             "abstraction_gate": {
-                "status": "reuse_or_justify" if patterns["matches"] else "no_candidate_in_budget",
+                "status": gate_status,
                 "requirement": "Extend a matching pattern or validate the new abstraction with an explicit justification.",
             },
             "guidance": [
@@ -173,7 +179,7 @@ def call_tool(root: Path, name: str, arguments: Dict[str, Any]):
         architecture = root / ".engineering" / "architecture.yaml"
         return {
             "repository": understand_repo(root),
-            "architecture": architecture.read_text(encoding="utf-8") if architecture.exists() else None,
+            "architecture": _read_metadata(architecture, 20_000),
         }
     if name in {"aplomo_review_diff", "engineering_review_diff"}:
         budget = _context_budget(root)
@@ -208,7 +214,7 @@ def _context_budget(root: Path) -> Dict[str, int]:
 
 
 def _read_metadata(path: Path, limit: int) -> str | None:
-    if not path.exists():
+    if path.is_symlink() or not path.is_file():
         return None
     try:
         with path.open("r", encoding="utf-8", errors="ignore") as stream:

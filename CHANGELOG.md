@@ -2,6 +2,12 @@
 
 All notable changes are documented here. Aplomo follows Semantic Versioning.
 
+## Unreleased
+
+- Report inconclusive searches when a read limit is reached without a reuse candidate.
+- Bound and report untracked diff reads, and reuse that content to detect duplicate declarations.
+- Skip symlinked files when reading repository source and metadata.
+
 ## 1.1.0 - 2026-09-26
 
 - Add a repository-owned design-pattern catalog at `.engineering/patterns.md`.

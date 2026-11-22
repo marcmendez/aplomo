@@ -64,6 +64,44 @@ class RepositoryAnalysisTests(unittest.TestCase):
         self.assertEqual(result["status"], "needs_justification")
         self.assertTrue(result["candidates"])
 
+    def test_incomplete_search_without_candidates_is_inconclusive(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "a.py").write_text("# filler\n" * 20, encoding="utf-8")
+            (root / "b.py").write_text("class RetryPolicy:\n    pass\n", encoding="utf-8")
+            result = validate_new_abstraction(root, "RetryPolicy", "", max_files=1)
+        self.assertEqual(result["status"], "inconclusive")
+        self.assertEqual(result["read_summary"]["stop_reason"], "file_budget")
+
+    def test_index_skips_symlinked_source_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            source = parent / "outside.py"
+            source.write_text("class External:\n    pass\n", encoding="utf-8")
+            root = parent / "repo"
+            root.mkdir()
+            try:
+                (root / "link.py").symlink_to(source)
+            except OSError as exc:
+                self.skipTest(f"Cannot create symlinks: {exc}")
+            result = index_repository(root)
+        self.assertEqual(result["files"], 0)
+
+    def test_diff_review_reports_incomplete_untracked_scan(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            (root / "a.py").write_text("class Helper:\n    pass\n", encoding="utf-8")
+            (root / "b.py").write_text("class Helper:\n    pass\n", encoding="utf-8")
+            (root / "test_app.py").write_text("def test_app():\n    assert True\n", encoding="utf-8")
+            incomplete = review_diff(root, max_files=1, max_chars=50)
+            complete = review_diff(root)
+        self.assertEqual(incomplete["status"], "needs_attention")
+        self.assertEqual(incomplete["untracked_read_summary"]["stop_reason"], "file_budget")
+        self.assertEqual(incomplete["untracked_read_summary"]["files_read"], 1)
+        self.assertEqual(incomplete["duplicate_abstractions"], [])
+        self.assertEqual(complete["duplicate_abstractions"][0]["name"], "Helper")
+
     def test_diff_review_flags_code_without_tests_and_possible_secret(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

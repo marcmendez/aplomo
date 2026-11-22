@@ -18,9 +18,12 @@ DEFAULT_MAX_CHARS = 200_000
 
 
 def source_files(root: Path) -> Iterable[Path]:
-    for path in sorted(root.rglob("*")):
-        if path.is_file() and path.suffix in SOURCE_SUFFIXES and not any(part in IGNORED_DIRS for part in path.parts):
-            yield path
+    for directory, subdirectories, filenames in root.walk():
+        subdirectories[:] = sorted(name for name in subdirectories if name not in IGNORED_DIRS)
+        for filename in sorted(filenames):
+            path = directory / filename
+            if path.suffix in SOURCE_SUFFIXES and not path.is_symlink() and path.is_file():
+                yield path
 
 
 def index_repository(
@@ -136,7 +139,10 @@ def validate_new_abstraction(
     query = " ".join(part for part in (proposed_name, responsibility) if part.strip())
     patterns = find_existing_patterns(root, query, max_matches, max_files, max_chars)
     candidates = patterns["matches"]
-    if not candidates:
+    if not candidates and patterns["read_summary"]["truncated"]:
+        status = "inconclusive"
+        decision = "Search stopped before completion. Refine the query or widen the read budget."
+    elif not candidates:
         status = "pass"
         decision = "No matching implementation was found inside the configured read budget."
     elif not justification.strip():
@@ -204,19 +210,26 @@ def review_diff(
     changed = re.findall(r"^\+\+\+ b/(.+)$", diff, re.MULTILINE)
     additions = [line[1:] for line in diff.splitlines() if line.startswith("+") and not line.startswith("+++")]
     untracked_result = subprocess.run(
-        ["git", "ls-files", "--others", "--exclude-standard"],
+        ["git", "ls-files", "--others", "--exclude-standard", "-z"],
         cwd=str(root), text=True, capture_output=True, check=False,
     )
-    untracked = untracked_result.stdout.splitlines() if untracked_result.returncode == 0 else []
+    untracked = untracked_result.stdout.rstrip("\0").split("\0") if untracked_result.stdout else []
+    untracked_content = {}
     untracked_chars = 0
     for relative in untracked[:max_files]:
         text = _read_bounded(root / relative, max_chars - untracked_chars)
+        untracked_content[relative] = text
         additions.extend(text.splitlines())
         untracked_chars += len(text)
         if untracked_chars >= max_chars:
             break
+    untracked_reads = _read_summary(len(untracked), len(untracked_content), untracked_chars, max_files, max_chars)
     changed = list(dict.fromkeys([*changed, *untracked]))
     warnings = []
+    if untracked_result.returncode:
+        warnings.append("Unable to list untracked files")
+    if untracked_reads["truncated"]:
+        warnings.append("Untracked-file review reached its read budget")
     secret_pattern = re.compile(r"(?i)(api[_-]?key|secret|password|token)\s*[:=]\s*['\"][^'\"]+")
     if any(secret_pattern.search(line) for line in additions):
         warnings.append("Possible secret introduced in added lines")
@@ -227,8 +240,10 @@ def review_diff(
     if code_changed and not tests_changed:
         warnings.append("Code changed without an accompanying test change")
     duplicate_abstractions, duplicate_reads = _find_duplicate_abstractions(
-        root, diff, untracked, max_files, max_chars
+        root, diff, untracked, untracked_content, max_files, max_chars
     )
+    if duplicate_reads["truncated"]:
+        warnings.append("Duplicate declaration search reached its read budget")
     for duplicate in duplicate_abstractions:
         warnings.append(
             f"Possible duplicate abstraction '{duplicate['name']}' added in {duplicate['added_in']}; "
@@ -241,6 +256,7 @@ def review_diff(
         "additions": len(additions),
         "duplicate_abstractions": duplicate_abstractions,
         "read_summary": duplicate_reads,
+        "untracked_read_summary": untracked_reads,
         "warnings": warnings,
     }
 
@@ -249,6 +265,7 @@ def _find_duplicate_abstractions(
     root: Path,
     diff: str,
     untracked: List[str],
+    untracked_content: Dict[str, str],
     max_files: int,
     max_chars: int,
 ) -> tuple[List[Dict[str, str]], Dict[str, Any]]:
@@ -262,18 +279,24 @@ def _find_duplicate_abstractions(
             match = declaration.match(line[1:])
             if match:
                 added.append((match.group(1), current))
-    for relative in untracked:
+    declarations: Dict[str, List[str]] = {}
+    for relative, text in untracked_content.items():
         if Path(relative).suffix not in SOURCE_SUFFIXES:
             continue
-        for line in _read_bounded(root / relative, max_chars).splitlines():
+        for line in text.splitlines():
             match = declaration.match(line)
             if match:
-                added.append((match.group(1), relative))
+                name = match.group(1)
+                added.append((name, relative))
+                if "test" not in Path(relative).name.lower():
+                    declarations.setdefault(name, []).append(relative)
 
-    files = list(source_files(root))
+    if not added:
+        return [], _read_summary(0, 0, 0, max_files, max_chars)
+    untracked_paths = set(untracked)
+    files = [path for path in source_files(root) if path.relative_to(root).as_posix() not in untracked_paths]
     files_read = 0
     chars_read = 0
-    declarations: Dict[str, List[str]] = {}
     for path in files[:max_files]:
         remaining = max_chars - chars_read
         if remaining <= 0:
@@ -306,7 +329,7 @@ def _query_tokens(query: str) -> List[str]:
 
 
 def _read_bounded(path: Path, limit: int) -> str:
-    if limit <= 0:
+    if limit <= 0 or path.is_symlink() or not path.is_file():
         return ""
     try:
         with path.open("r", encoding="utf-8", errors="ignore") as stream:

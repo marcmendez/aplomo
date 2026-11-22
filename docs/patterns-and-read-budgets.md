@@ -24,11 +24,12 @@ Do not turn the catalog into general architecture documentation. Link to an ADR 
 
 ## Abstraction decisions
 
-`aplomo_validate_abstraction` returns one of three states:
+`aplomo_validate_abstraction` returns one of four states:
 
 | Status | Meaning | Expected action |
 |---|---|---|
-| `pass` | No candidate was found inside the read budget. | Confirm whether the search completed; implement only if the scoped evidence is sufficient. |
+| `pass` | The scoped search completed without a candidate. | Check whether the query covered the expected names and responsibilities. |
+| `inconclusive` | The search stopped at a limit without returning a candidate. | Refine the query or widen the budget deliberately. |
 | `needs_justification` | Candidates exist and no exception was supplied. | Reuse a candidate or provide a concrete responsibility/lifecycle difference. |
 | `review_required` | Candidates and a justification both exist. | Compare them before accepting the new abstraction. |
 
@@ -54,7 +55,7 @@ The preflight divides the file and character allowance between repository mappin
 
 When a no-match result is truncated, refine the query before increasing the budget. For monorepos, prefer a module-specific query or run the task from the relevant checkout rather than setting an unlimited global budget.
 
-The budget applies to source content read by Aplomo. Small repository-owned metadata files such as `.engineering/architecture.yaml` and `.engineering/patterns.md` are returned separately.
+The budget applies to source content read by Aplomo. Small repository-owned metadata files such as `.engineering/architecture.yaml` and `.engineering/patterns.md` are returned separately. Diff review applies the limits separately to untracked content and existing declarations, reports both summaries, and warns when a pass is incomplete. Git's tracked diff is processed separately from these source-read budgets.
 
 ## Known limits
 
