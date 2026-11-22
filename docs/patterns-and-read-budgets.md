@@ -12,7 +12,7 @@ Aplomo uses a reuse-before-create contract for non-trivial code changes. The obj
 
 ## Pattern catalog
 
-Keep `.engineering/patterns.md` short and operational. Each entry should answer:
+The skill can work with the code and guidance already in your repository. If your team has a preferred implementation, a short entry in `.engineering/patterns.md` points the agent to it. Each entry should answer:
 
 - What responsibility does the pattern own?
 - Which implementation is canonical?
@@ -21,6 +21,30 @@ Keep `.engineering/patterns.md` short and operational. Each entry should answer:
 - Which tests or commands validate compatibility?
 
 Do not turn the catalog into general architecture documentation. Link to an ADR when the reasoning needs more space.
+
+For example, a project might document its shared retry policy:
+
+```markdown
+## Retry policy
+
+- Responsibility: decide which failures to retry and when to stop.
+- Canonical implementation: `src/shared/retry.py`.
+- Existing caller: `src/payments/charge.py`.
+- Extend when: the workflow uses the same failure classification and retry limits.
+- Validation: `pytest tests/test_retry.py`.
+```
+
+## Run local checks
+
+The skill can run these optional commands, or you can run them yourself from the repository:
+
+```bash
+aplomo prepare "Add retries to a new workflow" --query "RetryPolicy"
+aplomo validate-abstraction "NewRetryPolicy" "Retry transient failures"
+aplomo review-diff
+```
+
+Commands return JSON. Candidate search is lexical and diff warnings are advisory. Architecture notes guide the agent. Use project tests or CI for rules that must block a merge.
 
 ## Abstraction decisions
 
@@ -64,3 +88,9 @@ The budget applies to source content read by Aplomo. Small repository-owned meta
 - Duplicate declaration checks currently focus on classes, interfaces, and named types.
 - Generated or vendored directories are excluded from source discovery.
 - A truncated no-match result is never evidence that the repository contains no equivalent.
+
+## Optional integrations
+
+To register the local analysis as MCP tools in a new project, use `aplomo init --agents codex --mcp`. Add `--hooks` if you want lifecycle events recorded in a local, gitignored log. These flags are independent.
+
+For an existing project, edit `.engineering/config.yaml` and run `aplomo install`. To switch an older installation to the skill-based setup, set `integrations.mcp` and `integrations.hooks` to `false`. Aplomo removes unchanged adapters it owns and reports customized files for manual migration. Restart the assistant after changing its integrations. [Privacy](../PRIVACY.md)

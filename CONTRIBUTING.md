@@ -1,5 +1,7 @@
 # Contributing
 
+The shared workflow lives in [skills/aplomo-review/](skills/aplomo-review/). [src/engineering_harness/](src/engineering_harness/) contains the CLI, repository analysis, and optional MCP adapter. [tests/](tests/) and [docs/](docs/) cover validation and assistant setup.
+
 You need Python 3.12 or newer and `uv`.
 
 ```bash
