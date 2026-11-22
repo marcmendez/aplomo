@@ -139,7 +139,14 @@ class CliTests(unittest.TestCase):
                 smoke.assert_not_called()
             self.assertFalse((root / LAUNCHER).exists())
             self.assertFalse((root / ".engineering/events.jsonl").exists())
-            self.assertIn("Aplomo review skill", (root / "AGENTS.md").read_text(encoding="utf-8"))
+            for instruction, location in (
+                ("AGENTS.md", ".agents"),
+                ("CLAUDE.md", ".claude"),
+                (".cursor/rules/aplomo.mdc", ".cursor"),
+            ):
+                skill = f"{location}/skills/aplomo-review/SKILL.md"
+                self.assertIn(skill, (root / instruction).read_text(encoding="utf-8"))
+                self.assertTrue((root / skill).is_file())
 
     def test_init_without_assistant_markers_installs_portable_skills(self):
         with tempfile.TemporaryDirectory() as directory:

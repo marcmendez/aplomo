@@ -38,6 +38,12 @@ For example, a project might document its shared retry policy:
 
 The skill can run these optional commands, or you can run them yourself from the repository:
 
+Install the CLI on your PATH if you want to use these commands regularly.
+
+```bash
+uv tool install --python 3.12 git+https://github.com/marcmendez/aplomo.git
+```
+
 ```bash
 aplomo prepare "Add retries to a new workflow" --query "RetryPolicy" --path src/payments
 aplomo validate-abstraction "NewRetryPolicy" "Retry transient failures"
@@ -97,6 +103,6 @@ The budget applies to source content read by Aplomo. Small repository-owned meta
 
 ## Optional integrations
 
-To register the local analysis as MCP tools in a new project, use `aplomo init --agents codex --mcp`. Add `--hooks` if you want lifecycle events recorded in a local, gitignored log. These flags are independent.
+Install the CLI on your PATH before enabling the optional integrations. To register the local analysis as MCP tools in a new project, use `aplomo init --agents codex --mcp`. Add `--hooks` if you want lifecycle events recorded in a local, gitignored log. These flags are independent.
 
 For an existing project, edit `.engineering/config.yaml` and run `aplomo install`. To switch an older installation to the skill-based setup, set `integrations.mcp` and `integrations.hooks` to `false`. Aplomo removes unchanged adapters it owns and reports customized files for manual migration. Restart the assistant after changing its integrations. [Privacy](../PRIVACY.md)

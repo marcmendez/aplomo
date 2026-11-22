@@ -1,17 +1,9 @@
 # Use Aplomo with Claude Code
 
-Install the CLI from the [quick start](../README.md#install), then run this from your repository:
+Run the [one-time setup](../README.md#install) from your project root. Then open the project in Claude Code and make a normal request:
 
-```bash
-aplomo init
-```
+> Add an audit trail to account updates.
 
-Open the project in Claude Code and invoke the skill:
-
-```text
-/aplomo-review Add an audit trail to account updates using the existing event pattern.
-```
-
-Aplomo installs the skill at `.claude/skills/aplomo-review/` and adds a short section to `CLAUDE.md` for non-trivial work. To select Claude Code explicitly on first setup, pass `--agents claude`. For a manual installation, copy the [standalone skill folder](../skills/aplomo-review/) to that directory and invoke it explicitly.
+Aplomo installs the skill at `.claude/skills/aplomo-review/` and adds instructions to `CLAUDE.md` so Claude Code knows when to use it. You can also type `/aplomo-review` for an explicit review. To select Claude Code explicitly on first setup, append `--agents claude`. For a manual installation, copy the [standalone skill folder](../skills/aplomo-review/) to the project skill directory.
 
 Claude Code can use native tools and the local Aplomo CLI. If you enable the [optional MCP adapter](../README.md#optional-mcp-and-hooks), review and approve the server if prompted. [Claude Code skills](https://code.claude.com/docs/en/skills)

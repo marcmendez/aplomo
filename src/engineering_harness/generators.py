@@ -116,9 +116,9 @@ def install_integrations(root: Path, config: HarnessConfig) -> Dict[str, str]:
             make_launcher_executable(path)
         statuses[relative] = "installed"
     if "codex" in config.agents and config.integrations.get("skills", True):
-        statuses["AGENTS.md"] = _merge_instruction_file(root / "AGENTS.md", AGENTS_BLOCK)
+        statuses["AGENTS.md"] = _merge_instruction_file(root / "AGENTS.md", AGENTS_BLOCK.format(location=".agents"))
     if "claude" in config.agents and config.integrations.get("skills", True):
-        statuses["CLAUDE.md"] = _merge_instruction_file(root / "CLAUDE.md", AGENTS_BLOCK)
+        statuses["CLAUDE.md"] = _merge_instruction_file(root / "CLAUDE.md", AGENTS_BLOCK.format(location=".claude"))
     statuses[".gitignore"] = _merge_gitignore(root / ".gitignore")
     manifest_path = root / ".engineering" / "generated-manifest.json"
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -167,18 +167,24 @@ def _json(value: object) -> str:
     return json.dumps(value, indent=2, ensure_ascii=False) + "\n"
 
 
-AGENTS_BLOCK = """
+REVIEW_INSTRUCTION = (
+    "Before adding a feature, making a substantial refactor, changing a shared contract, or reviewing code, "
+    "read and follow the Aplomo review skill at `{location}/skills/aplomo-review/SKILL.md`. "
+    "Use focused local checks for routine edits."
+)
+
+AGENTS_BLOCK = f"""
 ## Aplomo
 
-For non-trivial code changes, use the Aplomo review skill. Follow the repository patterns and boundaries in `.engineering/`, search for code to reuse before adding an abstraction, and run focused checks on the final diff.
+{REVIEW_INSTRUCTION}
 
 Update `.engineering/config.yaml` and run `aplomo install` to regenerate integrations.
 """
 
-CURSOR_RULE = """---
+CURSOR_RULE = f"""---
 description: Use Aplomo for non-trivial code changes
 alwaysApply: true
 ---
 
-For non-trivial code changes, follow the Aplomo review skill at `.cursor/skills/aplomo-review/SKILL.md`. Use `.engineering/` for repository patterns and boundaries.
+{REVIEW_INSTRUCTION.format(location=".cursor")}
 """

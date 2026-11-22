@@ -1,7 +1,7 @@
 <!-- aplomo:start -->
 ## Aplomo
 
-For non-trivial code changes, use the Aplomo review skill. Follow the repository patterns and boundaries in `.engineering/`, search for code to reuse before adding an abstraction, and run focused checks on the final diff.
+Before adding a feature, making a substantial refactor, changing a shared contract, or reviewing code, read and follow the Aplomo review skill at `.claude/skills/aplomo-review/SKILL.md`. Use focused local checks for routine edits.
 
 Update `.engineering/config.yaml` and run `aplomo install` to regenerate integrations.
 <!-- aplomo:end -->
