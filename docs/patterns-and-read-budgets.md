@@ -39,12 +39,16 @@ For example, a project might document its shared retry policy:
 The skill can run these optional commands, or you can run them yourself from the repository:
 
 ```bash
-aplomo prepare "Add retries to a new workflow" --query "RetryPolicy"
+aplomo prepare "Add retries to a new workflow" --query "RetryPolicy" --path src/payments
 aplomo validate-abstraction "NewRetryPolicy" "Retry transient failures"
 aplomo review-diff
 ```
 
 Commands return JSON. Candidate search is lexical and diff warnings are advisory. Architecture notes guide the agent. Use project tests or CI for rules that must block a merge.
+
+## Choose reviews
+
+A contained change usually needs only inspection of the affected code and focused tests. Broader changes can select architecture review for new responsibilities and dependencies, correctness review for changed behavior, and compatibility review for existing contracts or overlapping changes. The [skill's review profiles](../skills/aplomo-review/references/) define the evidence each review should return. The same profiles work in a single session or with authorized read-only subagents where the host supports them.
 
 ## Abstraction decisions
 
@@ -70,7 +74,9 @@ context:
   max_matches: 12
 ```
 
-The preflight divides the file and character allowance between repository mapping and candidate discovery. Results report actual consumption and a `stop_reason`:
+Start with exact symbols and the affected directory. With `--path`, the preflight searches only the specified project files or directories and skips the repository-wide map. Repeat the option to add another scope. A no-match result covers only those paths.
+
+Without a path, the preflight divides the file and character allowance between repository mapping and candidate discovery. This allowance caps work for one call. It also bounds how much source material the tool can inspect, while the match cap limits the number of snippets returned to the assistant. Results report actual consumption and a `stop_reason`:
 
 - `complete`: every candidate file in scope was read;
 - `match_limit`: enough evidence was found and returned;

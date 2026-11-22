@@ -21,7 +21,10 @@ TOOLS = [
         "description": "Prepare one coding request with repository structure, relevant existing patterns, and architecture rules in a single call.",
         "inputSchema": {
             "type": "object",
-            "properties": {"request": {"type": "string"}, "query": {"type": "string"}},
+            "properties": {
+                "request": {"type": "string"}, "query": {"type": "string"},
+                "paths": {"type": "array", "items": {"type": "string"}},
+            },
             "required": ["request"],
             "additionalProperties": False,
         },
@@ -119,7 +122,9 @@ def dispatch(root: Path, request: Dict[str, Any]):
 def call_tool(root: Path, name: str, arguments: Dict[str, Any]):
     # The engineering_* aliases keep pre-Aplomo generated skills working during migration.
     if name == "aplomo_prepare_change":
-        return prepare_change(root, str(arguments.get("request", "")), str(arguments.get("query", "")))
+        return prepare_change(
+            root, str(arguments.get("request", "")), str(arguments.get("query", "")), arguments.get("paths", ()),
+        )
     if name in {"aplomo_understand_repo", "engineering_understand_repo"}:
         budget = context_budget(root)
         return understand_repo(root, budget["max_files"], budget["max_chars"])

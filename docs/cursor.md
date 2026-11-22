@@ -3,14 +3,14 @@
 Install the CLI from the [quick start](../README.md#install), then run this from your repository:
 
 ```bash
-aplomo init --agents cursor
+aplomo init
 ```
 
 Reopen the project in Cursor. In Agent chat, type `/` and select `aplomo-review`. Then describe the change:
 
 > Add pagination to the users endpoint. Reuse the existing pagination pattern and update its tests.
 
-Aplomo installs the skill at `.cursor/skills/aplomo-review/SKILL.md` and adds a short project rule for non-trivial work. For a manual installation, copy the [standalone SKILL.md](../skills/aplomo-review/SKILL.md) to that skill path and invoke it explicitly. [Cursor skills](https://cursor.com/docs/skills)
+Aplomo installs the skill at `.cursor/skills/aplomo-review/` and adds a short project rule for non-trivial work. To select Cursor explicitly on first setup, pass `--agents cursor`. For a manual installation, copy the [standalone skill folder](../skills/aplomo-review/) to that directory and invoke it explicitly. [Cursor skills](https://cursor.com/docs/skills)
 
 ## Cursor Cloud
 

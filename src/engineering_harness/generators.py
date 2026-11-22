@@ -71,17 +71,19 @@ def generated_files(config: HarnessConfig) -> Dict[str, str]:
             )
 
     if config.agents and config.integrations.get("skills", True):
-        skill = Path(__file__).with_name("aplomo_review.md")
-        if not skill.is_file():
-            skill = Path(__file__).resolve().parents[2] / "skills/aplomo-review/SKILL.md"
-        instructions = skill.read_text(encoding="utf-8")
+        skill = Path(__file__).with_name("aplomo_review")
+        if not skill.is_dir():
+            skill = Path(__file__).resolve().parents[2] / "skills/aplomo-review"
+        resources = {
+            path.relative_to(skill).as_posix(): path.read_text(encoding="utf-8")
+            for path in sorted(skill.rglob("*.md"))
+        }
         if "cursor" in config.agents:
             files[".cursor/rules/aplomo.mdc"] = CURSOR_RULE
-            files[".cursor/skills/aplomo-review/SKILL.md"] = instructions
-        if "codex" in config.agents:
-            files[".agents/skills/aplomo-review/SKILL.md"] = instructions
-        if "claude" in config.agents:
-            files[".claude/skills/aplomo-review/SKILL.md"] = instructions
+        for agent, location in (("cursor", ".cursor"), ("codex", ".agents"), ("claude", ".claude")):
+            if agent in config.agents:
+                for relative, content in resources.items():
+                    files[f"{location}/skills/aplomo-review/{relative}"] = content
     return files
 
 

@@ -69,6 +69,7 @@ def build_parser() -> ArgumentParser:
     prepare = subparsers.add_parser("prepare", help="Find reusable patterns and repository context as JSON")
     prepare.add_argument("request")
     prepare.add_argument("--query", help="Focused pattern search terms")
+    prepare.add_argument("--path", action="append", default=[], help="Search only this repository-relative file or directory (repeatable)")
     prepare.add_argument("--root", type=Path, default=Path.cwd())
     prepare.set_defaults(handler=command_analysis)
 
@@ -102,7 +103,12 @@ def build_parser() -> ArgumentParser:
 def command_init(args: Namespace) -> int:
     root = args.root.resolve()
     profile = detect_repository(root)
-    selected = args.agents if args.agents is not None else [name for name, detected in profile.agents.items() if detected]
+    selected = args.agents
+    if selected is None:
+        selected = [name for name, detected in profile.agents.items() if detected]
+        if not selected:
+            selected = list(profile.agents)
+            print("No assistant detected; installing portable skills for all supported assistants.")
     config = HarnessConfig(
         project_name=root.name, agents=selected, technologies=profile.technologies,
         integrations={"hooks": args.hooks, "mcp": args.mcp, "skills": True},
@@ -212,7 +218,11 @@ def command_hook(args: Namespace) -> int:
 def command_analysis(args: Namespace) -> int:
     root = args.root.resolve()
     if args.command == "prepare":
-        result = prepare_change(root, args.request, args.query or "")
+        try:
+            result = prepare_change(root, args.request, args.query or "", args.path)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
     else:
         budget = context_budget(root)
         if args.command == "validate-abstraction":

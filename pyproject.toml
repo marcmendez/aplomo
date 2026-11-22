@@ -38,7 +38,7 @@ dev = ["pytest>=8.3,<10"]
 packages = ["src/engineering_harness"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"skills/aplomo-review/SKILL.md" = "engineering_harness/aplomo_review.md"
+"skills/aplomo-review" = "engineering_harness/aplomo_review"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

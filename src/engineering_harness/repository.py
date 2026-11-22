@@ -79,14 +79,16 @@ def find_existing_patterns(
     limit: int = 20,
     max_files: int = DEFAULT_MAX_FILES,
     max_chars: int = DEFAULT_MAX_CHARS,
+    *,
+    files: Iterable[Path] | None = None,
 ) -> Dict[str, Any]:
     if not query.strip():
         return {"query": query, "matches": [], "read_summary": _read_summary(0, 0, 0, max_files, max_chars)}
     tokens = _query_tokens(query)
     matches: List[Dict[str, Any]] = []
-    files = list(source_files(root))
+    candidates = list(source_files(root) if files is None else files)
     ranked = sorted(
-        files,
+        candidates,
         key=lambda path: (-sum(token in path.relative_to(root).as_posix().lower() for token in tokens), path.as_posix()),
     )
     files_read = 0
@@ -117,37 +119,43 @@ def find_existing_patterns(
         stop_reason = "match_limit"
     elif chars_read >= max_chars:
         stop_reason = "character_budget"
-    elif files_read >= max_files and files_read < len(files):
+    elif files_read >= max_files and files_read < len(candidates):
         stop_reason = "file_budget"
     else:
         stop_reason = "complete"
     return {
         "query": query,
         "matches": matches[:limit],
-        "read_summary": _read_summary(len(files), files_read, chars_read, max_files, max_chars, stop_reason),
+        "read_summary": _read_summary(len(candidates), files_read, chars_read, max_files, max_chars, stop_reason),
     }
 
 
-def prepare_change(root: Path, request: str, query: str = "") -> Dict[str, Any]:
+def prepare_change(root: Path, request: str, query: str = "", paths: Iterable[str] = ()) -> Dict[str, Any]:
     query = query.strip() or _search_query(request)
     budget = context_budget(root)
-    map_files = max(1, budget["max_files"] // 2)
-    map_chars = max(1, budget["max_chars"] // 2)
-    pattern_files = budget["max_files"] - map_files
-    pattern_chars = budget["max_chars"] - map_chars
+    paths = list(dict.fromkeys(paths))
     architecture = root / ".engineering" / "architecture.yaml"
     catalog = root / ".engineering" / "patterns.md"
-    repository = understand_repo(root, map_files, map_chars)
-    patterns = find_existing_patterns(
-        root, query, budget["max_matches"], max(1, pattern_files), max(1, pattern_chars)
-    )
+    if paths:
+        repository = None
+        patterns = find_existing_patterns(
+            root, query, budget["max_matches"], budget["max_files"], budget["max_chars"],
+            files=_scoped_source_files(root, paths),
+        )
+    else:
+        map_files = budget["max_files"] // 2
+        map_chars = budget["max_chars"] // 2
+        repository = understand_repo(root, map_files, map_chars)
+        patterns = find_existing_patterns(
+            root, query, budget["max_matches"], budget["max_files"] - map_files, budget["max_chars"] - map_chars,
+        )
     if patterns["matches"]:
         gate_status = "reuse_or_justify"
     elif patterns["read_summary"]["truncated"]:
         gate_status = "inconclusive"
     else:
         gate_status = "no_candidate_in_budget"
-    return {
+    result = {
         "request": request,
         "repository": repository,
         "existing_patterns": patterns,
@@ -164,6 +172,26 @@ def prepare_change(root: Path, request: str, query: str = "") -> Dict[str, Any]:
             "Add focused tests and inspect the final diff.",
         ],
     }
+    if paths:
+        result["search_paths"] = paths
+    return result
+
+
+def _scoped_source_files(root: Path, paths: Iterable[str]) -> list[Path]:
+    files: dict[Path, None] = {}
+    for relative in paths:
+        path = Path(relative)
+        scope = root / path
+        if (path.anchor or ".." in path.parts or IGNORED_DIRS.intersection(path.parts)
+                or scope.resolve() != root.resolve() / path):
+            raise ValueError(f"Use a repository-relative path without symlinks: {relative}")
+        if scope.is_dir():
+            files.update(dict.fromkeys(source_files(scope)))
+        elif scope.is_file() and scope.suffix in SOURCE_SUFFIXES:
+            files[scope] = None
+        else:
+            raise ValueError(f"Search path must be a directory or supported source file: {relative}")
+    return list(files)
 
 
 def _search_query(request: str) -> str:

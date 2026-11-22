@@ -13,9 +13,9 @@ An AI-generated change can pass its tests and still leave you with a second vers
 
 Use it when you ask an agent to add a feature, refactor existing code, or review a change. It adds three steps to the work:
 
-- **Find a precedent.** Look for similar code and read how real callers use it before editing.
+- **Find a precedent.** Search the affected part of the project first and read the relevant code and callers.
 - **Choose where the change belongs.** Extend an existing implementation when it owns the same behavior. Explain why a separate implementation fits when responsibilities differ.
-- **Review what changed.** Check the diff for duplicated logic and unrelated edits, then run the project's relevant tests.
+- **Review what changed.** Run focused checks for small edits. For bigger changes, choose the reviews that fit the risk: architecture, correctness, or compatibility.
 
 You can start with an existing repo as it is. Teams can also point Aplomo at shared implementations and their tests so each assistant works from the same guidance. [Record your team's patterns](docs/patterns-and-read-budgets.md#pattern-catalog)
 
@@ -26,18 +26,20 @@ The CLI installer requires Python 3.12+, Git, and [uv](https://docs.astral.sh/uv
 ```bash
 uv tool install --python 3.12 git+https://github.com/marcmendez/aplomo.git
 cd your-repository
-aplomo init --agents codex
+aplomo init
 ```
 
-Replace `codex` with `cursor` or `claude` for your assistant. You can pass multiple names to set up a shared repository.
+`aplomo init` is a one-time terminal command for any supported assistant. It detects assistants from the checkout and available commands, and installs portable skills for all three if it finds none. Use `--agents codex` or another explicit list when you want to choose.
+
+For a project already set up with Aplomo, update the CLI and run `aplomo install` to refresh the skill.
 
 | Assistant | Invoke the project skill | Guide |
 | --- | --- | --- |
-| Codex | `$aplomo-review` | [Codex](docs/codex.md) |
+| Codex | `$aplomo-review` | [Codex and Codex Cloud](docs/codex.md) |
 | Cursor | Select `aplomo-review` from the `/` menu | [Cursor and Cursor Cloud](docs/cursor.md) |
 | Claude Code | `/aplomo-review` | [Claude Code](docs/claude-code.md) |
 
-The guides also show how to copy the [standalone skill](skills/aplomo-review/SKILL.md) into a project without installing the CLI.
+The guides also show how to copy the [standalone skill folder](skills/aplomo-review/) into a project without installing the CLI.
 
 ## Use it on your next change
 
@@ -45,7 +47,7 @@ Open the project, select the skill and describe the work in your own words:
 
 > Add filtering to this list. Follow the approach used in similar screens and test the new behavior.
 
-For that request, the agent looks for a screen with working filters, checks whether its code fits the new screen, and runs the relevant tests after the edit. The skill uses the assistant's existing search, Git, and test tools. [Local checks and their limits](docs/patterns-and-read-budgets.md#run-local-checks)
+For that request, the agent looks for a screen with working filters, checks whether its code fits the new screen, and runs the relevant tests after the edit. A change that also touches a shared API can get a separate compatibility review. Where the assistant supports authorized delegation, independent reviewers can take the selected checks. [How review and scoped search work](docs/patterns-and-read-budgets.md#choose-reviews)
 
 ## Optional MCP and hooks
 

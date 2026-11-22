@@ -3,9 +3,18 @@
   "generator": "aplomo",
   "files": [
     ".agents/skills/aplomo-review/SKILL.md",
+    ".agents/skills/aplomo-review/references/architecture.md",
+    ".agents/skills/aplomo-review/references/compatibility.md",
+    ".agents/skills/aplomo-review/references/correctness.md",
     ".claude/skills/aplomo-review/SKILL.md",
+    ".claude/skills/aplomo-review/references/architecture.md",
+    ".claude/skills/aplomo-review/references/compatibility.md",
+    ".claude/skills/aplomo-review/references/correctness.md",
     ".cursor/rules/aplomo.mdc",
     ".cursor/skills/aplomo-review/SKILL.md",
+    ".cursor/skills/aplomo-review/references/architecture.md",
+    ".cursor/skills/aplomo-review/references/compatibility.md",
+    ".cursor/skills/aplomo-review/references/correctness.md",
     ".gitignore",
     "AGENTS.md",
     "CLAUDE.md"

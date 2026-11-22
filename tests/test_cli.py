@@ -141,6 +141,17 @@ class CliTests(unittest.TestCase):
             self.assertFalse((root / ".engineering/events.jsonl").exists())
             self.assertIn("Aplomo review skill", (root / "AGENTS.md").read_text(encoding="utf-8"))
 
+    def test_init_without_assistant_markers_installs_portable_skills(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with redirect_stdout(io.StringIO()), patch("engineering_harness.detection.shutil.which", return_value=None):
+                self.assertEqual(main(["init", "--root", str(root)]), 0)
+            self.assertEqual(HarnessConfig.load(root).agents, ["cursor", "claude", "codex"])
+            for location in (".cursor", ".claude", ".agents"):
+                skill = root / location / "skills/aplomo-review"
+                for name in ("architecture", "correctness", "compatibility"):
+                    self.assertTrue((skill / "references" / f"{name}.md").is_file())
+
     def test_disabling_mcp_removes_unmodified_adapters_and_preserves_custom_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -164,9 +175,12 @@ class CliTests(unittest.TestCase):
             root = Path(directory)
             subprocess.run(["git", "init", "-q"], cwd=root, check=True)
             (root / "retry.py").write_text("class RetryPolicy:\n    pass\n", encoding="utf-8")
+            (root / "retry_elsewhere.py").write_text("class RetryPolicy:\n    pass\n", encoding="utf-8")
             cases = [
                 (["prepare", "Add retries", "--query", "RetryPolicy"], "aplomo_prepare_change",
                  {"request": "Add retries", "query": "RetryPolicy"}),
+                (["prepare", "Add retries", "--query", "RetryPolicy", "--path", "retry.py"], "aplomo_prepare_change",
+                 {"request": "Add retries", "query": "RetryPolicy", "paths": ["retry.py"]}),
                 (["validate-abstraction", "InvoiceRetryPolicy", "retry invoices"], "aplomo_validate_abstraction",
                  {"proposed_name": "InvoiceRetryPolicy", "responsibility": "retry invoices"}),
                 (["review-diff"], "aplomo_review_diff", {}),

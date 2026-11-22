@@ -5,10 +5,33 @@ import unittest
 from pathlib import Path
 
 from engineering_harness.detection import detect_repository
-from engineering_harness.repository import find_existing_patterns, index_repository, review_diff, validate_new_abstraction
+from engineering_harness.repository import find_existing_patterns, index_repository, prepare_change, review_diff, validate_new_abstraction
 
 
 class RepositoryAnalysisTests(unittest.TestCase):
+    def test_scoped_preparation_only_walks_selected_directories_and_deduplicates_files(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            module = root / "payments"
+            module.mkdir()
+            (module / "retry.py").write_text("class RetryPolicy:\n    pass\n", encoding="utf-8")
+            (root / "outside.py").write_text("class RetryPolicy:\n    pass\n", encoding="utf-8")
+            with patch("engineering_harness.repository.source_files", return_value=iter([module / "retry.py"])) as walk:
+                result = prepare_change(root, "Add invoice retries", "RetryPolicy", ["payments", "payments/retry.py"])
+                walk.assert_called_once_with(module)
+            self.assertIsNone(result["repository"])
+            self.assertEqual(result["search_paths"], ["payments", "payments/retry.py"])
+            self.assertEqual(result["existing_patterns"]["read_summary"]["files_available"], 1)
+            self.assertEqual({match["path"] for match in result["existing_patterns"]["matches"]}, {"payments/retry.py"})
+
+    def test_scoped_preparation_rejects_paths_outside_repository(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(ValueError, "repository-relative"):
+                prepare_change(root, "Add retries", paths=["../outside.py"])
+
     def test_detects_languages_frameworks_database_and_agents(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

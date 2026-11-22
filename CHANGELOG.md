@@ -4,6 +4,8 @@ All notable changes are documented here. Aplomo follows Semantic Versioning.
 
 ## Unreleased
 
+- Make `aplomo init` install the portable skills even when it finds no assistant markers.
+- Add path-scoped searches and on-demand architecture, correctness, and compatibility review profiles.
 - Install the shared review skill by default for Cursor, Codex, and Claude Code. MCP and lifecycle hooks are opt-in.
 - Expose the same repository analysis through local `prepare`, `validate-abstraction`, and `review-diff` commands.
 - Remove unchanged optional adapters owned by Aplomo when they are disabled and preserve customized files for manual migration.
